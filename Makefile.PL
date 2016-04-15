@@ -95,7 +95,7 @@ sub wanted {
 
 WriteMultiInlineMakefile(
     NAME             => 'Bio::Easel',
-    AUTHOR           => q{Eric Nawrocki <nawrockie@janelia.hhmi.org>},
+    AUTHOR           => q{Eric Nawrocki <nawrocke@ncbi.nlm.nih.gov>},
     VERSION_FROM     => 'lib/Bio/Easel.pm',
     ABSTRACT_FROM    => 'lib/Bio/Easel.pm',
     LICENSE          => 'GPL_3',
