@@ -12,10 +12,15 @@ can use it to get an idea of the module's uses. It is usually a good idea
 to provide version information here so that people can decide whether
 fixes for the module are worth downloading.
 
-
 INSTALLATION
 
-To install this module, run the following commands:
+This module requires the Easel C library, which needs to 
+be cloned from GitHub. Before you can do that you will 
+need to create a 'src' directory. 
+        mkdir src 
+        git clone https://github.com/EddyRivasLab/easel.git easel
+
+Then, to install this module, after run the following commands:
 
 	perl Makefile.PL
 	make
