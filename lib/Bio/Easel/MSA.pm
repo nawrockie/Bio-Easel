@@ -109,6 +109,10 @@ No functions currently exported.
            :                 "SELEX", "aligned FASTA", "Clustal", "Clustal-like", 
            :                 "PHLYIP (interleaved)", or "PHYLIP (sequential)"
            : <forceText>:    '1' to read the alignment in text mode
+           : <isRna>:        '1' to force RNA alphabet
+           : <isDna>:        '1' to force DNA alphabet
+           : <isAmino>:      '1' to force protein alphabet
+           :
   Returns  : Bio::Easel::MSA object
 
 =cut
@@ -126,6 +130,16 @@ sub new {
   }
   else { 
     $self->{digitize} = 1;
+  }
+
+  if ( defined $args->{isRna} ) { 
+    $self->{isRna} = $args->{isRna};
+  }
+  if ( defined $args->{isDna} ) { 
+    $self->{isDna} = $args->{isDna};
+  }
+  if ( defined $args->{isAmino} ) { 
+    $self->{isAmino} = $args->{isAmino};
   }
 
   # First check that the file exists. If it exists, read it with
@@ -281,13 +295,24 @@ sub read_msa {
     $self->{digitize} = 1; 
   }
 
+  # default is to guess alphabet
+  if (! defined $self->{isRna}) { 
+    $self->{isRna} = 0;
+  }
+  if (! defined $self->{isDna}) { 
+    $self->{isDna} = 0;
+  }
+  if (! defined $self->{isAmino}) { 
+    $self->{isAmino} = 0;
+  }
+
   my $informat = "unknown";
   if (defined $self->{reqdFormat}) {
     $informat = $self->{reqdFormat};
     $self->_check_reqd_format();
   }
 
-  ($self->{esl_msa}, $self->{informat}) = _c_read_msa( $self->{path}, $informat, $self->{digitize});
+  ($self->{esl_msa}, $self->{informat}) = _c_read_msa( $self->{path}, $informat, $self->{digitize}, $self->{isRna}, $self->{isDna}, $self->{isAmino});
   # Possible values for 'format', a string, derived from esl_msafile.c::eslx_msafile_DecodeFormat(): 
   # "unknown", "Stockholm", "Pfam", "UCSC A2M", "PSI-BLAST", "SELEX", "aligned FASTA", "Clustal", 
   # "Clustal-like", "PHYLIP (interleaved)", or "PHYLIP (sequential)".

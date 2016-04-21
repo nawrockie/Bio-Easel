@@ -58,25 +58,50 @@ void _c_int_copy_array_perl_to_c (AV *perlAR, int *cA, int len)
  *            reqdFormat: required format, "unknown" for no specific format required
  *            digitize:   '1' to read alignment in digital mode, '0' to read in text mode
  *                        digital mode is faster, safer, text preserves case, exact characters in input msa
+ *            is_rna:     '1' to force RNA alphabet
+ *            is_dna:     '1' to force DNA alphabet
+ *            is_amino:   '1' to force amino alphabet
+ *           
+ *            Only one of is_rna, is_dna, and is_amino can be TRUE, if any is true, digitize
+ *            must also be true.
+ * 
  * Returns:   an ESL_MSA and a string describing it's format
  */
 
-void _c_read_msa (char *infile, char *reqdFormat, int digitize)
+void _c_read_msa (char *infile, char *reqdFormat, int digitize, int is_rna, int is_dna, int is_amino)
 {
   Inline_Stack_Vars;
 
   int           status;     /* Easel status code */
   ESLX_MSAFILE *afp;        /* open input alignment file */
   ESL_MSA      *msa;        /* an alignment */
-  ESL_ALPHABET *abc = NULL; /* alphabet for MSA, by passing this to 
-                             * eslx_msafile_Open(), we force digital MSA mode */
+  ESL_ALPHABET *abc = NULL; /* alphabet for MSA, if this stays NULL or we set it 
+                             * due to (is_rna, is_dna, or is_amino) and we pass
+                             * it to eslx_msafile_Open(), we force digital MSA mode */
   int           fmt;        /* int code for format string */
   char         *actual_format = NULL; /* string describing format of file, e.g. "Stockholm" */
-                             
+  
+  /* contract check: 0 or 1 of is_rna, is_dna, and is_amino can be true,
+   * if 1 of those is true, digitize must be true also
+   */
+  if(is_rna && is_dna)   croak("Error in c_read_msa, is_rna and is_dna are both true");
+  if(is_rna && is_amino) croak("Error in c_read_msa, is_rna and is_amino are both true");
+  if(is_dna && is_amino) croak("Error in c_read_msa, is_dna and is_amino are both true");
+  if((is_rna || is_dna || is_amino) && (! digitize)) { 
+    croak("Error in c_read_msa, alphabet is specified by digitize is FALSE");
+  }
+  
   /* decode reqdFormat string */
   fmt = eslx_msafile_EncodeFormat(reqdFormat);
-
-  /* open input file, either in text or digital mode */
+  
+  /* create alphabet if necessary */
+  if      (is_rna)   abc = esl_alphabet_Create(eslRNA);
+  else if (is_dna)   abc = esl_alphabet_Create(eslDNA);
+  else if (is_amino) abc = esl_alphabet_Create(eslAMINO); 
+  
+  /* open input file, either in text or digital mode, 
+   * abc could be a valid alphabet (if is_rna | is_dna | is_amino), in which case
+   * that alphabet will be set, or *abc could be null, in which case alphabet will be guessed */
   if ((status = eslx_msafile_Open((digitize) ? &abc : NULL, /* digitize or text mode */
                                   infile, NULL, fmt, NULL, &afp)) != eslOK) { 
     croak("Error reading alignment file %s: %s\n", infile, afp->errmsg);
@@ -85,7 +110,7 @@ void _c_read_msa (char *infile, char *reqdFormat, int digitize)
   /* read_msa */
   status = eslx_msafile_Read(afp, &msa);
   if(status != eslOK) croak("Alignment file %s read failed with error code %d\n", infile, status);
-
+  
   /* convert actual alignment file format to a string */
   actual_format = eslx_msafile_DecodeFormat(afp->format);
   
@@ -94,7 +119,7 @@ void _c_read_msa (char *infile, char *reqdFormat, int digitize)
   Inline_Stack_Push(newSVpvn(actual_format, strlen(actual_format)));
   Inline_Stack_Done;
   Inline_Stack_Return(2);
-
+  
   /* close msa file */
   free(actual_format);
   if (afp) eslx_msafile_Close(afp);
