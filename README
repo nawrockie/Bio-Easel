@@ -18,9 +18,9 @@ This module requires the Easel C library, which needs to
 be cloned from GitHub. Before you can do that you will 
 need to create a 'src' directory. 
         mkdir src 
-        git clone https://github.com/EddyRivasLab/easel.git easel
+        (cd src; git clone https://github.com/EddyRivasLab/easel.git easel)
 
-Then, to install this module, after run the following commands:
+Then, to install this module, run the following commands:
 
 	perl Makefile.PL
 	make

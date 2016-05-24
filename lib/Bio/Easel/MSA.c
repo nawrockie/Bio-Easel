@@ -73,11 +73,11 @@ void _c_read_msa (char *infile, char *reqdFormat, int digitize, int is_rna, int 
   Inline_Stack_Vars;
 
   int           status;     /* Easel status code */
-  ESLX_MSAFILE *afp;        /* open input alignment file */
+  ESL_MSAFILE *afp;        /* open input alignment file */
   ESL_MSA      *msa;        /* an alignment */
   ESL_ALPHABET *abc = NULL; /* alphabet for MSA, if this stays NULL or we set it 
                              * due to (is_rna, is_dna, or is_amino) and we pass
-                             * it to eslx_msafile_Open(), we force digital MSA mode */
+                             * it to esl_msafile_Open(), we force digital MSA mode */
   int           fmt;        /* int code for format string */
   char         *actual_format = NULL; /* string describing format of file, e.g. "Stockholm" */
   
@@ -92,7 +92,7 @@ void _c_read_msa (char *infile, char *reqdFormat, int digitize, int is_rna, int 
   }
   
   /* decode reqdFormat string */
-  fmt = eslx_msafile_EncodeFormat(reqdFormat);
+  fmt = esl_msafile_EncodeFormat(reqdFormat);
   
   /* create alphabet if necessary */
   if      (is_rna)   abc = esl_alphabet_Create(eslRNA);
@@ -102,17 +102,17 @@ void _c_read_msa (char *infile, char *reqdFormat, int digitize, int is_rna, int 
   /* open input file, either in text or digital mode, 
    * abc could be a valid alphabet (if is_rna | is_dna | is_amino), in which case
    * that alphabet will be set, or *abc could be null, in which case alphabet will be guessed */
-  if ((status = eslx_msafile_Open((digitize) ? &abc : NULL, /* digitize or text mode */
+  if ((status = esl_msafile_Open((digitize) ? &abc : NULL, /* digitize or text mode */
                                   infile, NULL, fmt, NULL, &afp)) != eslOK) { 
     croak("Error reading alignment file %s: %s\n", infile, afp->errmsg);
   }
   
   /* read_msa */
-  status = eslx_msafile_Read(afp, &msa);
+  status = esl_msafile_Read(afp, &msa);
   if(status != eslOK) croak("Alignment file %s read failed with error code %d\n", infile, status);
   
   /* convert actual alignment file format to a string */
-  actual_format = eslx_msafile_DecodeFormat(afp->format);
+  actual_format = esl_msafile_DecodeFormat(afp->format);
   
   Inline_Stack_Reset;
   Inline_Stack_Push(perl_obj(msa, "ESL_MSA"));
@@ -122,7 +122,7 @@ void _c_read_msa (char *infile, char *reqdFormat, int digitize, int is_rna, int 
   
   /* close msa file */
   free(actual_format);
-  if (afp) eslx_msafile_Close(afp);
+  if (afp) esl_msafile_Close(afp);
   
   return;
 }    
@@ -151,10 +151,10 @@ int _c_write_msa (ESL_MSA *msa, char *outfile, char *format)
       return eslFAIL;
     }
   }
-  if((fmt = eslx_msafile_EncodeFormat(format)) == eslMSAFILE_UNKNOWN) { 
+  if((fmt = esl_msafile_EncodeFormat(format)) == eslMSAFILE_UNKNOWN) { 
     return eslEINVAL;
   }
-  eslx_msafile_Write(ofp, msa, fmt);
+  esl_msafile_Write(ofp, msa, fmt);
 
   if(! do_stdout) {
     fclose(ofp);
@@ -1807,7 +1807,7 @@ _c_check_reqd_format(char *format)
 {
   int fmt; /* int format code */
 
-  fmt = eslx_msafile_EncodeFormat(format);
+  fmt = esl_msafile_EncodeFormat(format);
 
   if(fmt == eslMSAFILE_UNKNOWN) croak ("required format string %s, is not valid, choose from: \"stockholm\", \"pfam\", \"a2m\", \"phylip\", \"phylips\", \"psiblast\", \"selex\", \"afa\", \"clustal\", \"clustallike\"\n", format);
 
@@ -2037,7 +2037,7 @@ _c_create_from_string(char *msa_str, char *fmt_str, char *abc_str, int do_digiti
   ESL_ALPHABET *abc = NULL; 
   char errbuf[eslERRBUFSIZE];
 
-  fmt = eslx_msafile_EncodeFormat(fmt_str);
+  fmt = esl_msafile_EncodeFormat(fmt_str);
 
   ret_msa = esl_msa_CreateFromString(msa_str, fmt);
   if(ret_msa == NULL) croak("ERROR, problem creating MSA from string");

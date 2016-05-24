@@ -313,7 +313,7 @@ sub read_msa {
   }
 
   ($self->{esl_msa}, $self->{informat}) = _c_read_msa( $self->{path}, $informat, $self->{digitize}, $self->{isRna}, $self->{isDna}, $self->{isAmino});
-  # Possible values for 'format', a string, derived from esl_msafile.c::eslx_msafile_DecodeFormat(): 
+  # Possible values for 'format', a string, derived from esl_msafile.c::esl_msafile_DecodeFormat(): 
   # "unknown", "Stockholm", "Pfam", "UCSC A2M", "PSI-BLAST", "SELEX", "aligned FASTA", "Clustal", 
   # "Clustal-like", "PHYLIP (interleaved)", or "PHYLIP (sequential)".
 
