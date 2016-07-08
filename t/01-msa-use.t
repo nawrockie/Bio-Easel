@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 165;
+use Test::More tests => 179;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -490,7 +490,7 @@ for($mode = 0; $mode <= 1; $mode++) {
   if(defined $msa1) { undef $msa1; }
 
   #################################
-  # test column_subset_rename_nse
+  # test column_subset_rename_nse, without do_append
   @usemeA = ();
   $msa1 = Bio::Easel::MSA->new({
       fileLocation => $rfamfile, 
@@ -522,6 +522,33 @@ for($mode = 0; $mode <= 1; $mode++) {
   is($sqname, "CP000857.1/1802197-1802273", "column_subset_rename_nse() renamed sequence 4 properly.");
   $sqname = $msa1->get_sqname(4);
   is($sqname, "CP001383.1/2080781-2080702", "column_subset_rename_nse() renamed sequence 5 properly.");
+
+  if(defined $msa1) { undef $msa1; }
+
+  # one more time with appending coordinates instead of updating them
+  $msa1 = Bio::Easel::MSA->new({
+      fileLocation => $rfamfile, 
+      forceText    => $mode,
+  });
+  isa_ok($msa1, "Bio::Easel::MSA");
+  $alen = $msa1->alen;
+  # still removing first 3 and final 4 columns, so usemeA doesn't
+  # change
+  
+  $msa1->column_subset_rename_nse(\@usemeA, 0);
+
+  is($msa1->alen(), ($alen-7), "column_subset_rename_nse() removed correct number of columns.");
+ 
+  $sqname = $msa1->get_sqname(0);
+  is($sqname, "M15749.1/155-239/4-81", "column_subset_rename_nse() renamed sequence 1 properly.");
+  $sqname = $msa1->get_sqname(1);
+  is($sqname, "CP000653.1/2739273-2739189/4-81", "column_subset_rename_nse() renamed sequence 2 properly.");
+  $sqname = $msa1->get_sqname(2);
+  is($sqname, "CP000468.1/2032638-2032552/4-83", "column_subset_rename_nse() renamed sequence 3 properly.");
+  $sqname = $msa1->get_sqname(3);
+  is($sqname, "CP000857.1/1802194-1802277/4-80", "column_subset_rename_nse() renamed sequence 4 properly.");
+  $sqname = $msa1->get_sqname(4);
+  is($sqname, "CP001383.1/2080784-2080698/4-83", "column_subset_rename_nse() renamed sequence 5 properly.");
 
   if(defined $msa1) { undef $msa1; }
 

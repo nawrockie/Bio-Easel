@@ -1976,30 +1976,38 @@ sub column_subset
   Incept    : EPN, Thu Apr 17 09:59:48 2014
   Usage     : $msaObject->column_subset_rename_nse($usemeAR)
   Function  : Remove a subset of columns from an MSA and
-            : rename any sequences in name/start-end format
-            : so they are consistent with removed residues
-            : at the alignment ends. 
+            : add /start-end to the end of all of the names
+            : in the alignment. All removed residues must be at terminii 
+            : (no 'internal' residues can be removed). 
             :
-            : For example, imagine a two seq alignment:
+            : For example, imagine a 3 seq alignment:
             : seq1/5-9   AAAAA
             : seq2/12-13 --AA-
             : seq3       AABAA
             : with a @{$usemeAR} of (0, 0, 1, 1, 0).
             :
             : The returned alignment would be:
+            : seq1/5-9/3-4    AA
+            : seq2/12-13/1-2  AA
+            : seq3/3-4        BA
+            : 
+            : If ($do_update == 1) the behavior of this function
+            : changes to updating any sequences that are already in
+            : name/start-end format so that '/start-end' 
+            : are consistent with removed residues at the alignment
+            : ends. In the above example, the returned alignment
+            : would be:
             : seq1/7-8    AA
             : seq2/12-13  AA
             : seq3        BA
-            : 
+            :
             : Note the first sequence has been renamed, the second
             : has not because no residues were removed. The third
             : did have residues removed but it is not in 
             : "name/start-end" format so it was not renamed.
+            : 
             :
-            : If ($do_internal_check == 1) this function 
-            : also checks if any internal residues (non-terminii)
-            : are going to be removed. If so it will croak with 
-            : an error message.
+  Dies      : If any internal residues (non-terminii) are going to be removed.
             :
   Args      : $usemeAR: [0..i..alen-1] ref to array with value
             :           '1' to keep column i, '0' to remove it
@@ -2008,9 +2016,13 @@ sub column_subset
 
 sub column_subset_rename_nse
 {
-  my ($self, $usemeAR, $do_internal_check) = @_;
+  my ($self, $usemeAR, $do_update) = @_;
+  my $sub_name = "column_subset_rename_nse";
 
   $self->_check_msa();
+  if(! defined $do_update) { 
+    $do_update = 0; 
+  }
 
   # find first and final position we'll include
   my $apos;  # counter over alignment positions
@@ -2020,43 +2032,46 @@ sub column_subset_rename_nse
 
   while($usemeAR->[$spos] == 0 && $spos < $epos) { $spos++; }
   while($usemeAR->[$epos] == 0 && $epos > 1)     { $epos--; }
-  if($epos < $spos) { croak "ERROR in column_subset_rename_nse, trying to remove all columns"; }
+  if($epos < $spos) { croak "ERROR in $sub_name, trying to remove all columns"; }
 
   $spos++; # to fix off-by-one; spos is now 1..alen
   $epos++; # to fix off-by-one; epos is now 1..alen
 
   for(my $i = 0; $i < $nseq; $i++) { 
+    my $orig_name = $self->get_sqname($i);
     my ($is_nse, $name, $start, $end, $strand) = $self->_sqname_nse_breakdown($i);
-    # if we're in name/start-end format, check to see if we should change the sequence name
-    if($is_nse) { 
-      my $rename_flag = 0;
-      for($apos = 1; $apos < $spos; $apos++) {
+    if((! $do_update) || (! $is_nse)) { # disregard whatever start-end coordinates are in the nse
+      $start = 1;
+      $end   = $self->get_sqlen($i);
+    }
+    # determine what the new name will be
+    for($apos = 1; $apos < $spos; $apos++) {
+      if($self->is_residue($i, $apos)) { 
+        if(($strand == 1) || (! $do_update) || (! $is_nse)) { $start++; } # forward strand
+        else                                                { $start--; } # reverse strand
+      }
+    }
+    for($apos = $self->alen(); $apos > $epos; $apos--) {
+      if($self->is_residue($i, $apos)) { 
+        if(($strand == 1) || (! $do_update) || (! $is_nse)) { $end--; } # forward strand
+        else                                                { $end++; } # reverse strand
+      }
+    }
+    # check for any internal residues being removed (and croak if we find any)
+    for($apos = $spos; $apos <= $epos; $apos++) { 
+      if($usemeAR->[($apos-1)] == 0) { # remember off-by-one: usemeA is 0..alen-1 which apos, spos and epos are 1..alen
         if($self->is_residue($i, $apos)) { 
-          $rename_flag = 1;
-          if($strand == 1) { $start++; } # forward strand
-          else             { $start--; } # reverse strand
+          croak("ERROR in $sub_name, trying to remove internal residue for sequence $i ($orig_name) at position $apos"); 
         }
       }
-      for($apos = $self->alen(); $apos > $epos; $apos--) {
-        if($self->is_residue($i, $apos)) { 
-          $rename_flag = 1;
-          if($strand == 1) { $end--; } # forward strand
-          else             { $end++; } # reverse strand
-        }
-      }
-      # check for any internal residues being removed (and croak if we find any) if $do_internal_check flag passed in
-      if(defined $do_internal_check && $do_internal_check) { 
-        for($apos = $spos; $apos <= $epos; $apos++) { 
-          if($usemeAR->[($apos-1)] == 0) { # remember off-by-one: usemeA is 0..alen-1 which apos, spos and epos are 1..alen
-            if($self->is_residue($i, $apos)) { 
-              my $name = $self->get_sqname($i);
-              croak("ERROR in column_subset_rename_nse, trying to remove internal residue for sequence $i ($name) at position $apos"); 
-            }
-          }
-        }
-      }
-      # rename the sequence with new start-end
-      if($rename_flag) { $self->set_sqname($i, $name."/".$start."-".$end); }
+    }
+    # rename the sequence with by either appending start-end (if ! $do_update) or 
+    # rewriting start-end (if ! $do_append && $is_nse)
+    if(! $do_update) { 
+      $self->set_sqname($i, $orig_name."/".$start."-".$end); 
+    }
+    elsif($is_nse) { # update start and end
+      $self->set_sqname($i, $name."/".$start."-".$end); 
     }
   }
 
