@@ -21,7 +21,11 @@ my $min_avgpp   = 0.9;  # minimum average posterior probability for keeping a co
 my $use_weights = 0;    # TRUE to use sequence weights
 
 my $usage;
-$usage  = "esl-alidepair.pl [OPTIONS] <alignment file to work on> <name of output alignment file>\n";
+$usage  = "# esl-alidpair.pl :: remove consensus basepairs based on alignment posterior probabilities\n";
+$usage .= "# Bio-Easel 0.02 (July 2016)\n";
+$usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
+$usage .= "\n";
+$usage .= "Usage: esl-alidepair.pl [OPTIONS] <alignment file to work on> <name of output alignment file>\n";
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-a <f> : change minimum average posterior probability to keep to <f> [df: $min_avgpp]\n";
 $usage .= "\t\t-w     : use sequence weights in the alignment file to weight counts [df: do not]\n";

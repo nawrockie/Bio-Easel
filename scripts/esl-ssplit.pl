@@ -33,7 +33,11 @@ my $outfile_dir  = "";    # dir for output files, pwd unless -odir is used
              "d"       => \$do_dirty);
 
 my $usage;
-$usage  = "esl-ssplit.pl [OPTIONS] <seqfile to split> <# seqs for each new file (or # new files if -n)>\n";
+$usage  = "# esl-ssplit.pl :: split up an input sequence file into smaller files\n";
+$usage .= "# Bio-Easel 0.02 (July 2016)\n";
+$usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
+$usage .= "\n";
+$usage .= "Usage: esl-ssplit.pl [OPTIONS] <seqfile to split> <# seqs for each new file (or # new files if -n)>\n";
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-n        : 2nd cmd line arg specifies number of output files, not sequences per output file\n";
 $usage .= "\t\t-r        : requires -n, split sequences so roughly same number of residues are in each output file\n";
