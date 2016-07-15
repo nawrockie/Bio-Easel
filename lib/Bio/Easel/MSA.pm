@@ -2603,6 +2603,120 @@ sub remove_gap_rf_basepairs
 
 #-------------------------------------------------------------------------------
 
+=head2 aligned_to_unaligned_pos
+
+  Title     : aligned_to_unaligned_pos
+  Incept    : EPN, Thu Jul 14 15:31:16 2016
+  Usage     : $msaObject->aligned_to_unaligned_pos($sqidx, $apos)
+  Function  : Return the unaligned position $uapos [1..ualen] of 
+            : sequence $sqidx that is aligned at position $apos 
+            : of the MSA.
+            :
+            : $apos could be a gap for $sqidx. In this case, the behavior
+            : depends on the value of the argument $do_after. If $do_after is
+            : '0' or undefined, then:
+            :    - return $uapos for alignment position $ret_apos, where $ret_apos
+            :      is not a gap for $sqidx and $ret_apos is the highest possible
+            :      value that is less than $apos.
+            :    - if all alignment positions 1..$apos are gaps for $sqidx
+            :      we return -1 for both $uapos and for $ret_apos.
+            :
+            : If $do_after is '1', then:
+            :    - return $uapos for alignment position $ret_apos, where $ret_apos
+            :      is not a gap for $sqidx and $ret_apos is the lowest possible
+            :      value that is greater than $apos.
+            :    - if all alignment positions $apos..$alen are gaps for $sqidx
+            :      we return -1 for both $uapos and for $ret_apos.
+            : 
+  Args      : $sqidx:   index of sequence we are interested in
+            : $apos:     alignment position we are interested it
+            : $do_after: '1' to return $ret_apos > $apos if $apos is 
+            :            a gap, '0' to return $ret_apos < $apos if 
+            :            $apos is a gap, can be undef -- treated as 0.
+  Returns   : $uapos:    unaligned position that aligns at $ret_apos,
+            :            can be -1 in special circumstances (see 'Function'
+            :            section above).
+            : $ret_apos: the aligned position that $uapos corresponds to,
+            :            this will be $apos (passed in) if alignment position
+            :            $apos is not a gap. See 'function' section above 
+            :            for explanation of what it is if $apos is a gap.
+  Dies      : if $apos is < 0 or $apos > $alen
+=cut
+
+sub aligned_to_unaligned_pos
+{
+  my ($self, $sqidx, $apos, $do_after) = @_;
+
+  if(! defined $do_after) { $do_after = 0; }
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+  $self->_check_ax_apos($apos);
+
+  my $sqstring = _c_get_sqstring_aligned($self->{esl_msa}, $sqidx);
+  my $ret_apos; # return apos
+  my $uapos;    # return value, the unaligned position corresponding to $ret_apos
+
+  # is alignment position $apos a gap in $sqidx?
+  my $apos_char = substr($sqstring, $apos-1, 1);
+  my $is_gap = ($apos_char =~ m/[a-zA-Z]/) ? 0 : 1;
+
+  if(! $is_gap) { 
+    # not a gap, easy case
+    # $ret_apos is $apos, 
+    # remove all non-alphabetic characters, to get unaligned length
+    my $sqstring_to_apos_no_gaps = substr($sqstring, 0, $apos);
+    $sqstring_to_apos_no_gaps =~ s/[^a-zA-Z]//g;
+    $uapos = length($sqstring_to_apos_no_gaps);
+    return ($uapos, $apos);
+  }
+  else { 
+    # $apos is a gap for $sqidx:
+    # determine last  position before $apos that is not a gap, if any (if ! $do_after)
+    #        or first position after  $apos that is not a gap, if any (if $do_after)
+    if(! $do_after) { 
+      # $do_after is '0': determine last  position before $apos that is not a gap, if any (if ! $do_after)
+      # first check if there are any characters that are not gaps:
+      # remove all characters after apos, we don't care about them
+      my $sqstring_to_apos = substr($sqstring, 0, $apos);
+      if ($sqstring_to_apos =~ /[a-zA-Z]/) {
+        # we have at least 1 non-gap
+        (my $sqstring_to_apos_no_trailing_gaps = $sqstring_to_apos) =~ s/[^a-zA-Z]*$//;
+        $ret_apos = length($sqstring_to_apos_no_trailing_gaps);
+        # $ret_apos is now first aligned position before $apos which is not a gap for $seqidx
+
+        (my $sqstring_to_apos_no_gaps = $sqstring_to_apos_no_trailing_gaps) =~ s/[^a-zA-Z]//g; # remove all gaps from sqstring_no_gaps
+        $uapos = length($sqstring_to_apos_no_gaps); # length of substr_no_gaps gives us uapos
+      }
+      else { # no alphabetic characters before $apos, return -1 for both ret_apos and uapos
+        $ret_apos = -1;
+        $uapos    = -1;
+      }
+    }
+    else { 
+      # $do_after is '1': determine first position after  $apos that is not a gap, if any 
+      my $sqstring_apos_to_alen = substr($sqstring, $apos-1); # we want to examine from $apos to $alen (remember apos is 1..alen, not 0..alen-1)
+      if ($sqstring_apos_to_alen  =~ /[a-zA-Z]/) {
+        # we have at least 1 non-gap
+        (my $sqstring_apos_to_alen_no_leading_gaps = $sqstring_apos_to_alen) =~ s/^[^a-zA-Z]*//;
+        $ret_apos  = $self->alen - length($sqstring_apos_to_alen_no_leading_gaps) + 1; # the +1 is to account for the fact that we didn't remove the first nt
+        # $ret_apos is now first aligned position after $apos which is not a gap for $seqidx
+
+        (my $sqstring_apos_to_alen_no_gaps = $sqstring_apos_to_alen_no_leading_gaps) =~ s/[^a-zA-Z]//g; # remove all gaps from sqstring_apos_to_alen_no_gaps
+        (my $sqstring_no_gaps = $sqstring) =~ s/[^a-zA-Z]//g;
+        $uapos = length($sqstring_no_gaps) - length($sqstring_apos_to_alen_no_gaps) + 1; # again, +1 b/c we didn't remove the first nt;
+      }
+      else { # no alphabetic characters in the string
+        $ret_apos = -1;
+        $uapos    = -1;
+      }
+    }    
+    return ($uapos, $ret_apos);
+  }
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 DESTROY
 
   Title    : DESTROY
@@ -2889,10 +3003,10 @@ sub _check_all_sqname_nse {
 
 =head1 AUTHORS
 
-Eric Nawrocki, C<< <nawrockie at janelia.hhmi.org> >>
+Eric Nawrocki, C<< <nawrocke at ncbi.nlm.nih.gov> >>
 Jody Clements, C<< <clementsj at janelia.hhmi.org> >>
-Rob Finn, C<< <finnr at janelia.hhmi.org> >>
-William Arndt, C<< <arndtw at janelia.hhmi.org> >>
+Rob Finn, C<< <rdf at ebi.ac.uk> >>
+William Arndt, C<< <warndt at lbl.gov> >>
 
 =head1 BUGS
 

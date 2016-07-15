@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 179;
+use Test::More tests => 221;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -570,6 +570,52 @@ for($mode = 0; $mode <= 1; $mode++) {
   $msa1->remove_gap_rf_basepairs(1); # 1 says 'do WUSSify'
   $ss_cons_str = ".::<<<_A__>->>:<<-<.a__.>>>.";
   is($msa1->get_ss_cons(), $ss_cons_str, "remove_gap_rf_basepairs seems to be working with WUSSifying");
+
+  if(defined $msa1) { undef $msa1; }
+
+
+  ################################################
+  # aligned_to_unaligned_pos
+  $msa1 = Bio::Easel::MSA->new({
+      fileLocation => $gap_alnfile, 
+      forceText    => $mode,
+  });
+  isa_ok($msa1, "Bio::Easel::MSA");
+
+  my ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(0, 2, 0);
+  my ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(0, 2, 1);
+  is($uapos_before,    -1, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before, -1, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,      1, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,   3, "aligned_to_unaligned_pos seems to be working.");
+
+  ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(1, 2, 0);
+  ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(1, 2, 1);
+  is($uapos_before,     1, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before,  1, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,      2, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,   3, "aligned_to_unaligned_pos seems to be working.");
+
+  ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(1, 3, 0);
+  ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(1, 3, 1);
+  is($uapos_before,     2, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before,  3, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,      2, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,   3, "aligned_to_unaligned_pos seems to be working.");
+
+  ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(0, 29, 0);
+  ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(0, 29, 1);
+  is($uapos_before,    24, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before, 28, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,     -1, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,  -1, "aligned_to_unaligned_pos seems to be working.");
+
+  ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(1, 29, 0);
+  ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(1, 29, 1);
+  is($uapos_before,    25, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before, 29, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,     25, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,  29, "aligned_to_unaligned_pos seems to be working.");
 
   if(defined $msa1) { undef $msa1; }
 }
