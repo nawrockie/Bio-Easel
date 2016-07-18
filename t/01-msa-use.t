@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 221;
+use Test::More tests => 237;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -616,6 +616,37 @@ for($mode = 0; $mode <= 1; $mode++) {
   is($ret_apos_before, 29, "aligned_to_unaligned_pos seems to be working.");
   is($uapos_after,     25, "aligned_to_unaligned_pos seems to be working.");
   is($ret_apos_after,  29, "aligned_to_unaligned_pos seems to be working.");
+
+  if(defined $msa1) { undef $msa1; }
+
+  ################################################
+  # rfpos_to_aligned_pos
+  $msa1 = Bio::Easel::MSA->new({
+      fileLocation => $rf_alnfile, 
+      forceText    => $mode,
+  });
+  isa_ok($msa1, "Bio::Easel::MSA");
+
+  my $apos = $msa1->rfpos_to_aligned_pos(1, "~-_.");
+  is($apos, 2, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(2, "~-_.");
+  is($apos, 3, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(18, "~-_.");
+  is($apos, 19, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(19, "~-_.");
+  is($apos, 21, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(21, "~-_.");
+  is($apos, 23, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(22, "~-_.");
+  is($apos, 25, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(24, "~-_.");
+  is($apos, 27, "rfpos_to_aligned_pos seems to be working.");
 
   if(defined $msa1) { undef $msa1; }
 }

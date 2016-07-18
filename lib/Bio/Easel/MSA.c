@@ -2811,3 +2811,31 @@ void _c_remove_gap_rf_basepairs(ESL_MSA *msa, int do_wussify)
   return;
 }
     
+/* Function:  _c_rfpos_to_aligned_pos()
+ * Incept:    EPN, Mon Jul 18 15:48:54 2016
+ * Synposis:  Return the alignment position (1..alen) that corresponds to 
+ *            rfpos (nongap RF position) <rfpos>.
+ *            Gaps are defined as any charcater in gapstr.
+ * Dies:      If msa does not have RF annotation or 
+ *            nongap length of RF annotation is < rfpos.
+ */
+int _c_rfpos_to_aligned_pos (ESL_MSA *msa, int rfpos, char *gapstr) 
+{
+  int apos, idx; 
+  int cur_rfpos = 0;
+  int ret_apos  = -1; /* updated when we get to RF position rfpos */
+  if(msa->rf == NULL) croak("_c_rfpos_to_aligned_pos, RF annotation does not exist");
+
+  for (apos = 0; apos < msa->alen; apos++) {
+    if (strchr(gapstr, msa->rf[apos]) == NULL) {
+      /* not a gap */
+      cur_rfpos++;
+      if(cur_rfpos == rfpos) return apos+1; /* off-by-one with index in msa->rf */
+    }
+  }   
+
+  /* if we get here, rfpos must be > rflen */
+  croak("_c_rfpos_to_aligned_pos, trying to find rfpos %d but nongap RF length is %d", rfpos, cur_rfpos);
+
+  return -1; /* NEVER REACHED */
+}   

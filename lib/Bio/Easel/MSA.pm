@@ -2716,6 +2716,40 @@ sub aligned_to_unaligned_pos
 }
 
 #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+=head2 rfpos_to_aligned_pos
+
+  Title     : rfpos_to_aligned_pos
+  Incept    : EPN, Mon Jul 18 15:11:02 2016
+  Usage     : $msaObject->rfpos_to_aligned_pos($rfpos)
+  Function  : Return the alignment position corresponding to RF position
+            : (nongap in GC RF annotation) $rfpos.
+            :
+  Args      : $rfpos:     RF position we are interested in
+            : $gapstring: string of characters to consider as gaps,
+            :             if undefined we use '.-~'
+  Returns   : $apos:      alignment position (1..$alen) that $rfpos corresponds
+            :             to
+  Dies      : if $rfpos is < 0 or $rfpos > $rflen (number of nongap RF positions)
+            : if $self->{esl_msa} does not have RF annotation
+=cut
+
+sub rfpos_to_aligned_pos
+{
+  my ($self, $rfpos, $gapstring) = @_;
+
+  if(! defined $gapstring) { $gapstring = ".-~"; }
+
+  $self->_check_msa();
+  if(! $self->has_rf()) { 
+    croak "In rfpos_to_aligned_pos, but MSA does not have RF annotation";
+  }
+
+  return _c_rfpos_to_aligned_pos($self->{esl_msa}, $rfpos, $gapstring);
+}  
+
+#-------------------------------------------------------------------------------
 
 =head2 DESTROY
 
