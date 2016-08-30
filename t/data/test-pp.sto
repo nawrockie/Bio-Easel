@@ -1,0 +1,12 @@
+# STOCKHOLM 1.0
+#=GF AU Infernal 1.1.1
+
+se-sample1         UUAACUUUG.....GUUUGCUCCaAAA.---
+#=GR se-sample1 PP *********.....****999776444....
+se-sample2         UACACUUC-.....GAUG-GACC.AAA.GUC
+#=GR se-sample2 PP ********......****.****.***.***
+se-sample3         ---------aaaccGGUGGGUCCgUUAgGAC
+#=GR se-sample3 PP .........3333323379****99999***
+#=GC SS_cons       ::<<<____~~~~~>->>-<<-<.___.>>>
+#=GC RF            aAgaCUUCG~~~~~GAucgggCg.AcA.ccc
+//

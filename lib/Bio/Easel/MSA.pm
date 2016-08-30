@@ -1059,7 +1059,7 @@ sub get_sqlen {
   Usage    : $msaObject->get_column($apos)
   Function : Return a string that is column $apos of the alignment,
            : where apos runs 1..alen. So to get the first column
-           : of the alignment pass in 0 for $apos, pass in 1 for the
+           : of the alignment pass in 1 for $apos, pass in 2 for the
            : second column, etc.
   Args     : $apos: [1..alen] the desired column of the alignment 
   Returns  : $column: column $apos of the alignment, as a string
@@ -2748,6 +2748,64 @@ sub rfpos_to_aligned_pos
 
   return _c_rfpos_to_aligned_pos($self->{esl_msa}, $rfpos, $gapstring);
 }  
+
+#-------------------------------------------------------------------------------
+
+=head2 get_pp_avg
+
+  Title    : get_pp_avg
+  Incept   : EPN, Mon Aug 29 15:38:37 2016
+  Usage    : $msaObject->get_pp_avg()
+  Function : Return the average posterior probability of an aligned sequence
+           : for positions spos to epos. 
+  Args     : <idx>:  index of sequence you want avg PP for [0..nseq-1]
+           : <spos>: first aligned position you want avg PP for (pass 1 for first position) [1..alen]
+           : <epos>: final aligned position you want avg PP for (pass msa->alen for final position) [1..alen]
+  Returns  : two values:
+           :   1) average aligned posterior probability annotation for sequence index idx from aligned positions spos..epos
+           :   2) number of nongap positions for sequence index idx from aligned positions spos..epos
+
+=cut
+
+sub get_pp_avg { 
+  my ( $self, $idx, $spos, $epos ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($idx);
+  $self->_check_ppidx($idx);
+  $self->_check_ax_apos($spos);
+  $self->_check_ax_apos($epos);
+
+  if($spos > $epos) { croak "ERROR in get_pp_avg(), spos > epos ($spos > $epos)"; }
+
+  my $full_ppstring = _c_get_ppstring_aligned( $self->{esl_msa}, $idx );
+  my $pplen    = $epos-$spos+1;
+  my $ppstring = substr($full_ppstring, $spos-1, $pplen);
+  my @pp_A = split("", $ppstring);
+
+  my $ppavg = 0.; # sum, then average, of all posterior probability values
+  my $ppct  = 0;  # number of nongap posterior probability values
+  for(my $ppidx = 0; $ppidx < $pplen; $ppidx++) { 
+    my $ppval = $pp_A[$ppidx];
+    if   ($ppval eq ".") { ; } # do nothing 
+    elsif($ppval eq "*") { $ppavg += 0.975; $ppct++; } # do nothing 
+    elsif($ppval eq "9") { $ppavg += 0.9;   $ppct++; } # do nothing 
+    elsif($ppval eq "8") { $ppavg += 0.8;   $ppct++; } # do nothing 
+    elsif($ppval eq "7") { $ppavg += 0.7;   $ppct++; } # do nothing 
+    elsif($ppval eq "6") { $ppavg += 0.6;   $ppct++; } # do nothing 
+    elsif($ppval eq "5") { $ppavg += 0.5;   $ppct++; } # do nothing 
+    elsif($ppval eq "4") { $ppavg += 0.4;   $ppct++; } # do nothing 
+    elsif($ppval eq "3") { $ppavg += 0.3;   $ppct++; } # do nothing 
+    elsif($ppval eq "2") { $ppavg += 0.2;   $ppct++; } # do nothing 
+    elsif($ppval eq "1") { $ppavg += 0.1;   $ppct++; } # do nothing 
+    elsif($ppval eq "0") { $ppavg += 0.025; $ppct++; } # do nothing 
+    else { croak "ERROR in get_pp_avg(), unexpected PP value of $ppval"; }
+  }
+  if($ppct > 0) { 
+    $ppavg /= $ppct; 
+  }
+  return ($ppavg, $ppct);
+}
 
 #-------------------------------------------------------------------------------
 

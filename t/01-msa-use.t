@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 237;
+use Test::More tests => 255;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -17,6 +17,7 @@ my $rf_alnfile    = "./t/data/test.rf.sto";
 my $rf_alnfile2   = "./t/data/test2.rf.sto";
 my $pknot_alnfile = "./t/data/test.pknot.rf.sto";
 my $gap_alnfile   = "./t/data/test-gap.sto";
+my $pp_alnfile    = "./t/data/test-pp.sto";
 my ($msa1, $msa2);
 my ($path, $nseq, $sqname, $sqidx, $any_gaps, $len, $avglen, $outfile, $id, $checksum, $format, $is_digitized);
 my ($line, $line1, $line2, $mode, $msa_str, $trash);
@@ -647,6 +648,36 @@ for($mode = 0; $mode <= 1; $mode++) {
 
   $apos = $msa1->rfpos_to_aligned_pos(24, "~-_.");
   is($apos, 27, "rfpos_to_aligned_pos seems to be working.");
+
+  if(defined $msa1) { undef $msa1; }
+
+  ################################################
+  # get_pp_avg
+  $msa1 = Bio::Easel::MSA->new({
+      fileLocation => $pp_alnfile, 
+      forceText    => $mode,
+  });
+  isa_ok($msa1, "Bio::Easel::MSA");
+
+  my ($ppavg, $ppct) = $msa1->get_pp_avg(0, 1, 31);
+  $ppavg = int(($ppavg * 100) + 0.5);
+  is($ppavg, 84, "get_pp_avg seems to be working.");
+  is($ppct,  22, "get_pp_avg seems to be working.");
+
+  ($ppavg, $ppct) = $msa1->get_pp_avg(0, 28, 31);
+  $ppavg = int($ppavg);
+  is($ppavg, 0, "get_pp_avg seems to be working.");
+  is($ppct,  0, "get_pp_avg seems to be working.");
+
+  ($ppavg, $ppct) = $msa1->get_pp_avg(0, 25, 27);
+  $ppavg = int(($ppavg * 100) + 0.5);
+  is($ppavg, 40, "get_pp_avg seems to be working.");
+  is($ppct,  3,  "get_pp_avg seems to be working.");
+
+  ($ppavg, $ppct) = $msa1->get_pp_avg(2, 10, 20);
+  $ppavg = int(($ppavg * 100) + 0.5);
+  is($ppavg, 44, "get_pp_avg seems to be working.");
+  is($ppct,  11, "get_pp_avg seems to be working.");
 
   if(defined $msa1) { undef $msa1; }
 }
