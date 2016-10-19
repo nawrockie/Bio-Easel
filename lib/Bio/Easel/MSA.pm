@@ -1059,7 +1059,7 @@ sub get_sqlen {
   Usage    : $msaObject->get_column($apos)
   Function : Return a string that is column $apos of the alignment,
            : where apos runs 1..alen. So to get the first column
-           : of the alignment pass in 0 for $apos, pass in 1 for the
+           : of the alignment pass in 1 for $apos, pass in 2 for the
            : second column, etc.
   Args     : $apos: [1..alen] the desired column of the alignment 
   Returns  : $column: column $apos of the alignment, as a string
@@ -1976,30 +1976,38 @@ sub column_subset
   Incept    : EPN, Thu Apr 17 09:59:48 2014
   Usage     : $msaObject->column_subset_rename_nse($usemeAR)
   Function  : Remove a subset of columns from an MSA and
-            : rename any sequences in name/start-end format
-            : so they are consistent with removed residues
-            : at the alignment ends. 
+            : add /start-end to the end of all of the names
+            : in the alignment. All removed residues must be at terminii 
+            : (no 'internal' residues can be removed). 
             :
-            : For example, imagine a two seq alignment:
+            : For example, imagine a 3 seq alignment:
             : seq1/5-9   AAAAA
             : seq2/12-13 --AA-
             : seq3       AABAA
             : with a @{$usemeAR} of (0, 0, 1, 1, 0).
             :
             : The returned alignment would be:
+            : seq1/5-9/3-4    AA
+            : seq2/12-13/1-2  AA
+            : seq3/3-4        BA
+            : 
+            : If ($do_update == 1) the behavior of this function
+            : changes to updating any sequences that are already in
+            : name/start-end format so that '/start-end' 
+            : are consistent with removed residues at the alignment
+            : ends. In the above example, the returned alignment
+            : would be:
             : seq1/7-8    AA
             : seq2/12-13  AA
             : seq3        BA
-            : 
+            :
             : Note the first sequence has been renamed, the second
             : has not because no residues were removed. The third
             : did have residues removed but it is not in 
             : "name/start-end" format so it was not renamed.
+            : 
             :
-            : If ($do_internal_check == 1) this function 
-            : also checks if any internal residues (non-terminii)
-            : are going to be removed. If so it will croak with 
-            : an error message.
+  Dies      : If any internal residues (non-terminii) are going to be removed.
             :
   Args      : $usemeAR: [0..i..alen-1] ref to array with value
             :           '1' to keep column i, '0' to remove it
@@ -2008,9 +2016,13 @@ sub column_subset
 
 sub column_subset_rename_nse
 {
-  my ($self, $usemeAR, $do_internal_check) = @_;
+  my ($self, $usemeAR, $do_update) = @_;
+  my $sub_name = "column_subset_rename_nse";
 
   $self->_check_msa();
+  if(! defined $do_update) { 
+    $do_update = 0; 
+  }
 
   # find first and final position we'll include
   my $apos;  # counter over alignment positions
@@ -2020,43 +2032,46 @@ sub column_subset_rename_nse
 
   while($usemeAR->[$spos] == 0 && $spos < $epos) { $spos++; }
   while($usemeAR->[$epos] == 0 && $epos > 1)     { $epos--; }
-  if($epos < $spos) { croak "ERROR in column_subset_rename_nse, trying to remove all columns"; }
+  if($epos < $spos) { croak "ERROR in $sub_name, trying to remove all columns"; }
 
   $spos++; # to fix off-by-one; spos is now 1..alen
   $epos++; # to fix off-by-one; epos is now 1..alen
 
   for(my $i = 0; $i < $nseq; $i++) { 
+    my $orig_name = $self->get_sqname($i);
     my ($is_nse, $name, $start, $end, $strand) = $self->_sqname_nse_breakdown($i);
-    # if we're in name/start-end format, check to see if we should change the sequence name
-    if($is_nse) { 
-      my $rename_flag = 0;
-      for($apos = 1; $apos < $spos; $apos++) {
+    if((! $do_update) || (! $is_nse)) { # disregard whatever start-end coordinates are in the nse
+      $start = 1;
+      $end   = $self->get_sqlen($i);
+    }
+    # determine what the new name will be
+    for($apos = 1; $apos < $spos; $apos++) {
+      if($self->is_residue($i, $apos)) { 
+        if(($strand == 1) || (! $do_update) || (! $is_nse)) { $start++; } # forward strand
+        else                                                { $start--; } # reverse strand
+      }
+    }
+    for($apos = $self->alen(); $apos > $epos; $apos--) {
+      if($self->is_residue($i, $apos)) { 
+        if(($strand == 1) || (! $do_update) || (! $is_nse)) { $end--; } # forward strand
+        else                                                { $end++; } # reverse strand
+      }
+    }
+    # check for any internal residues being removed (and croak if we find any)
+    for($apos = $spos; $apos <= $epos; $apos++) { 
+      if($usemeAR->[($apos-1)] == 0) { # remember off-by-one: usemeA is 0..alen-1 which apos, spos and epos are 1..alen
         if($self->is_residue($i, $apos)) { 
-          $rename_flag = 1;
-          if($strand == 1) { $start++; } # forward strand
-          else             { $start--; } # reverse strand
+          croak("ERROR in $sub_name, trying to remove internal residue for sequence $i ($orig_name) at position $apos"); 
         }
       }
-      for($apos = $self->alen(); $apos > $epos; $apos--) {
-        if($self->is_residue($i, $apos)) { 
-          $rename_flag = 1;
-          if($strand == 1) { $end--; } # forward strand
-          else             { $end++; } # reverse strand
-        }
-      }
-      # check for any internal residues being removed (and croak if we find any) if $do_internal_check flag passed in
-      if(defined $do_internal_check && $do_internal_check) { 
-        for($apos = $spos; $apos <= $epos; $apos++) { 
-          if($usemeAR->[($apos-1)] == 0) { # remember off-by-one: usemeA is 0..alen-1 which apos, spos and epos are 1..alen
-            if($self->is_residue($i, $apos)) { 
-              my $name = $self->get_sqname($i);
-              croak("ERROR in column_subset_rename_nse, trying to remove internal residue for sequence $i ($name) at position $apos"); 
-            }
-          }
-        }
-      }
-      # rename the sequence with new start-end
-      if($rename_flag) { $self->set_sqname($i, $name."/".$start."-".$end); }
+    }
+    # rename the sequence with by either appending start-end (if ! $do_update) or 
+    # rewriting start-end (if ! $do_append && $is_nse)
+    if(! $do_update) { 
+      $self->set_sqname($i, $orig_name."/".$start."-".$end); 
+    }
+    elsif($is_nse) { # update start and end
+      $self->set_sqname($i, $name."/".$start."-".$end); 
     }
   }
 
@@ -2588,6 +2603,212 @@ sub remove_gap_rf_basepairs
 
 #-------------------------------------------------------------------------------
 
+=head2 aligned_to_unaligned_pos
+
+  Title     : aligned_to_unaligned_pos
+  Incept    : EPN, Thu Jul 14 15:31:16 2016
+  Usage     : $msaObject->aligned_to_unaligned_pos($sqidx, $apos)
+  Function  : Return the unaligned position $uapos [1..ualen] of 
+            : sequence $sqidx that is aligned at position $apos 
+            : of the MSA.
+            :
+            : $apos could be a gap for $sqidx. In this case, the behavior
+            : depends on the value of the argument $do_after. If $do_after is
+            : '0' or undefined, then:
+            :    - return $uapos for alignment position $ret_apos, where $ret_apos
+            :      is not a gap for $sqidx and $ret_apos is the highest possible
+            :      value that is less than $apos.
+            :    - if all alignment positions 1..$apos are gaps for $sqidx
+            :      we return -1 for both $uapos and for $ret_apos.
+            :
+            : If $do_after is '1', then:
+            :    - return $uapos for alignment position $ret_apos, where $ret_apos
+            :      is not a gap for $sqidx and $ret_apos is the lowest possible
+            :      value that is greater than $apos.
+            :    - if all alignment positions $apos..$alen are gaps for $sqidx
+            :      we return -1 for both $uapos and for $ret_apos.
+            : 
+  Args      : $sqidx:   index of sequence we are interested in
+            : $apos:     alignment position we are interested it
+            : $do_after: '1' to return $ret_apos > $apos if $apos is 
+            :            a gap, '0' to return $ret_apos < $apos if 
+            :            $apos is a gap, can be undef -- treated as 0.
+  Returns   : $uapos:    unaligned position that aligns at $ret_apos,
+            :            can be -1 in special circumstances (see 'Function'
+            :            section above).
+            : $ret_apos: the aligned position that $uapos corresponds to,
+            :            this will be $apos (passed in) if alignment position
+            :            $apos is not a gap. See 'function' section above 
+            :            for explanation of what it is if $apos is a gap.
+  Dies      : if $apos is < 0 or $apos > $alen
+=cut
+
+sub aligned_to_unaligned_pos
+{
+  my ($self, $sqidx, $apos, $do_after) = @_;
+
+  if(! defined $do_after) { $do_after = 0; }
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+  $self->_check_ax_apos($apos);
+
+  my $sqstring = _c_get_sqstring_aligned($self->{esl_msa}, $sqidx);
+  my $ret_apos; # return apos
+  my $uapos;    # return value, the unaligned position corresponding to $ret_apos
+
+  # is alignment position $apos a gap in $sqidx?
+  my $apos_char = substr($sqstring, $apos-1, 1);
+  my $is_gap = ($apos_char =~ m/[a-zA-Z]/) ? 0 : 1;
+
+  if(! $is_gap) { 
+    # not a gap, easy case
+    # $ret_apos is $apos, 
+    # remove all non-alphabetic characters, to get unaligned length
+    my $sqstring_to_apos_no_gaps = substr($sqstring, 0, $apos);
+    $sqstring_to_apos_no_gaps =~ s/[^a-zA-Z]//g;
+    $uapos = length($sqstring_to_apos_no_gaps);
+    return ($uapos, $apos);
+  }
+  else { 
+    # $apos is a gap for $sqidx:
+    # determine last  position before $apos that is not a gap, if any (if ! $do_after)
+    #        or first position after  $apos that is not a gap, if any (if $do_after)
+    if(! $do_after) { 
+      # $do_after is '0': determine last  position before $apos that is not a gap, if any (if ! $do_after)
+      # first check if there are any characters that are not gaps:
+      # remove all characters after apos, we don't care about them
+      my $sqstring_to_apos = substr($sqstring, 0, $apos);
+      if ($sqstring_to_apos =~ /[a-zA-Z]/) {
+        # we have at least 1 non-gap
+        (my $sqstring_to_apos_no_trailing_gaps = $sqstring_to_apos) =~ s/[^a-zA-Z]*$//;
+        $ret_apos = length($sqstring_to_apos_no_trailing_gaps);
+        # $ret_apos is now first aligned position before $apos which is not a gap for $seqidx
+
+        (my $sqstring_to_apos_no_gaps = $sqstring_to_apos_no_trailing_gaps) =~ s/[^a-zA-Z]//g; # remove all gaps from sqstring_no_gaps
+        $uapos = length($sqstring_to_apos_no_gaps); # length of substr_no_gaps gives us uapos
+      }
+      else { # no alphabetic characters before $apos, return -1 for both ret_apos and uapos
+        $ret_apos = -1;
+        $uapos    = -1;
+      }
+    }
+    else { 
+      # $do_after is '1': determine first position after  $apos that is not a gap, if any 
+      my $sqstring_apos_to_alen = substr($sqstring, $apos-1); # we want to examine from $apos to $alen (remember apos is 1..alen, not 0..alen-1)
+      if ($sqstring_apos_to_alen  =~ /[a-zA-Z]/) {
+        # we have at least 1 non-gap
+        (my $sqstring_apos_to_alen_no_leading_gaps = $sqstring_apos_to_alen) =~ s/^[^a-zA-Z]*//;
+        $ret_apos  = $self->alen - length($sqstring_apos_to_alen_no_leading_gaps) + 1; # the +1 is to account for the fact that we didn't remove the first nt
+        # $ret_apos is now first aligned position after $apos which is not a gap for $seqidx
+
+        (my $sqstring_apos_to_alen_no_gaps = $sqstring_apos_to_alen_no_leading_gaps) =~ s/[^a-zA-Z]//g; # remove all gaps from sqstring_apos_to_alen_no_gaps
+        (my $sqstring_no_gaps = $sqstring) =~ s/[^a-zA-Z]//g;
+        $uapos = length($sqstring_no_gaps) - length($sqstring_apos_to_alen_no_gaps) + 1; # again, +1 b/c we didn't remove the first nt;
+      }
+      else { # no alphabetic characters in the string
+        $ret_apos = -1;
+        $uapos    = -1;
+      }
+    }    
+    return ($uapos, $ret_apos);
+  }
+}
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+=head2 rfpos_to_aligned_pos
+
+  Title     : rfpos_to_aligned_pos
+  Incept    : EPN, Mon Jul 18 15:11:02 2016
+  Usage     : $msaObject->rfpos_to_aligned_pos($rfpos)
+  Function  : Return the alignment position corresponding to RF position
+            : (nongap in GC RF annotation) $rfpos.
+            :
+  Args      : $rfpos:     RF position we are interested in
+            : $gapstring: string of characters to consider as gaps,
+            :             if undefined we use '.-~'
+  Returns   : $apos:      alignment position (1..$alen) that $rfpos corresponds
+            :             to
+  Dies      : if $rfpos is < 0 or $rfpos > $rflen (number of nongap RF positions)
+            : if $self->{esl_msa} does not have RF annotation
+=cut
+
+sub rfpos_to_aligned_pos
+{
+  my ($self, $rfpos, $gapstring) = @_;
+
+  if(! defined $gapstring) { $gapstring = ".-~"; }
+
+  $self->_check_msa();
+  if(! $self->has_rf()) { 
+    croak "In rfpos_to_aligned_pos, but MSA does not have RF annotation";
+  }
+
+  return _c_rfpos_to_aligned_pos($self->{esl_msa}, $rfpos, $gapstring);
+}  
+
+#-------------------------------------------------------------------------------
+
+=head2 get_pp_avg
+
+  Title    : get_pp_avg
+  Incept   : EPN, Mon Aug 29 15:38:37 2016
+  Usage    : $msaObject->get_pp_avg()
+  Function : Return the average posterior probability of an aligned sequence
+           : for positions spos to epos. 
+  Args     : <idx>:  index of sequence you want avg PP for [0..nseq-1]
+           : <spos>: first aligned position you want avg PP for (pass 1 for first position) [1..alen]
+           : <epos>: final aligned position you want avg PP for (pass msa->alen for final position) [1..alen]
+  Returns  : two values:
+           :   1) average aligned posterior probability annotation for sequence index idx from aligned positions spos..epos
+           :   2) number of nongap positions for sequence index idx from aligned positions spos..epos
+
+=cut
+
+sub get_pp_avg { 
+  my ( $self, $idx, $spos, $epos ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($idx);
+  $self->_check_ppidx($idx);
+  $self->_check_ax_apos($spos);
+  $self->_check_ax_apos($epos);
+
+  if($spos > $epos) { croak "ERROR in get_pp_avg(), spos > epos ($spos > $epos)"; }
+
+  my $full_ppstring = _c_get_ppstring_aligned( $self->{esl_msa}, $idx );
+  my $pplen    = $epos-$spos+1;
+  my $ppstring = substr($full_ppstring, $spos-1, $pplen);
+  my @pp_A = split("", $ppstring);
+
+  my $ppavg = 0.; # sum, then average, of all posterior probability values
+  my $ppct  = 0;  # number of nongap posterior probability values
+  for(my $ppidx = 0; $ppidx < $pplen; $ppidx++) { 
+    my $ppval = $pp_A[$ppidx];
+    if   ($ppval eq ".") { ; } # do nothing 
+    elsif($ppval eq "*") { $ppavg += 0.975; $ppct++; } # do nothing 
+    elsif($ppval eq "9") { $ppavg += 0.9;   $ppct++; } # do nothing 
+    elsif($ppval eq "8") { $ppavg += 0.8;   $ppct++; } # do nothing 
+    elsif($ppval eq "7") { $ppavg += 0.7;   $ppct++; } # do nothing 
+    elsif($ppval eq "6") { $ppavg += 0.6;   $ppct++; } # do nothing 
+    elsif($ppval eq "5") { $ppavg += 0.5;   $ppct++; } # do nothing 
+    elsif($ppval eq "4") { $ppavg += 0.4;   $ppct++; } # do nothing 
+    elsif($ppval eq "3") { $ppavg += 0.3;   $ppct++; } # do nothing 
+    elsif($ppval eq "2") { $ppavg += 0.2;   $ppct++; } # do nothing 
+    elsif($ppval eq "1") { $ppavg += 0.1;   $ppct++; } # do nothing 
+    elsif($ppval eq "0") { $ppavg += 0.025; $ppct++; } # do nothing 
+    else { croak "ERROR in get_pp_avg(), unexpected PP value of $ppval"; }
+  }
+  if($ppct > 0) { 
+    $ppavg /= $ppct; 
+  }
+  return ($ppavg, $ppct);
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 DESTROY
 
   Title    : DESTROY
@@ -2874,10 +3095,10 @@ sub _check_all_sqname_nse {
 
 =head1 AUTHORS
 
-Eric Nawrocki, C<< <nawrockie at janelia.hhmi.org> >>
+Eric Nawrocki, C<< <nawrocke at ncbi.nlm.nih.gov> >>
 Jody Clements, C<< <clementsj at janelia.hhmi.org> >>
-Rob Finn, C<< <finnr at janelia.hhmi.org> >>
-William Arndt, C<< <arndtw at janelia.hhmi.org> >>
+Rob Finn, C<< <rdf at ebi.ac.uk> >>
+William Arndt, C<< <warndt at lbl.gov> >>
 
 =head1 BUGS
 
