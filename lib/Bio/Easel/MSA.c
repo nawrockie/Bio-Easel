@@ -674,6 +674,18 @@ SV *_c_get_sqstring_aligned(ESL_MSA *msa, int seqidx)
   return NULL;
 }
 
+/* Function:  _c_check_ppidx()
+ * Incept:    EPN, Mon Jul  7 09:15:48 2014
+ * Synposis:  Return '1' if sequence <idx> has PP annotation in the MSA, else return '0';
+ */
+int _c_check_ppidx(ESL_MSA *msa, int idx)
+{
+  if(msa->pp      == NULL)        return 0;
+  if(idx < 0 || idx >= msa->nseq) return 0;
+  if(msa->pp[idx] == NULL)        return 0;
+  return 1;
+}
+
 /* Function:  _c_get_ppstring_aligned()
  * Incept:    EPN, Mon Jul  7 09:20:03 2014
  * Purpose:   Return aligned PP annotation for sequence <seqidx>.
@@ -2278,17 +2290,6 @@ char *_c_get_gf(ESL_MSA *msa, int idx)
   return msa->gf[idx];
 }
 
-/* Function:  _c_check_ppidx()
- * Incept:    EPN, Mon Jul  7 09:15:48 2014
- * Synposis:  Return '1' if sequence <idx> has PP annotation in the MSA, else return '0';
- */
-int _c_check_ppidx(ESL_MSA *msa, int idx)
-{
-  if(msa->pp      == NULL)        return 0;
-  if(idx < 0 || idx >= msa->nseq) return 0;
-  if(msa->pp[idx] == NULL)        return 0;
-  return 1;
-}
 
 /* Function:  _c_most_informative_sequence()
  * Incept:    EPN, Thu May 15 13:21:13 2014
@@ -2318,7 +2319,6 @@ char *_c_most_informative_sequence(ESL_MSA *msa, float gapthresh, int use_weight
   double     sum;              /* sum of a vector, used in several contexts */
   char      *mis = NULL;       /* the most informative sequence, allocated below */
   int       *above_bgA = NULL; /* [0..a..abc->K-1] above_bg[a] is '1' if freq of nt 'a' is above background in current column */
-  char       gapchar = '-';    /* gap character */
   int        amatch;           /* degenerate residue index that matches current column */
   int        found_mismatch;   /* set to '1' when we found a mismatch for current column and candidate degenerate residue */
   float      seqwt = 0.;       /* weight of current sequence, always 1.0 if use_weights == FALSE */
@@ -2584,12 +2584,6 @@ void _c_pos_covariation(ESL_MSA *msa)
   if(rposA) free(rposA);
   if(covA)  free(covA);
   return;
-
- ERROR:
-  if(rposA) free(rposA);
-  if(covA)  free(covA);
-  croak("ERROR: _c_pos_covariation(), out of memory");
-  return;
 }
 
 /* Function:  _c_pos_entropy()
@@ -2821,9 +2815,9 @@ void _c_remove_gap_rf_basepairs(ESL_MSA *msa, int do_wussify)
  */
 int _c_rfpos_to_aligned_pos (ESL_MSA *msa, int rfpos, char *gapstr) 
 {
-  int apos, idx; 
+  int apos;
   int cur_rfpos = 0;
-  int ret_apos  = -1; /* updated when we get to RF position rfpos */
+
   if(msa->rf == NULL) croak("_c_rfpos_to_aligned_pos, RF annotation does not exist");
 
   for (apos = 0; apos < msa->alen; apos++) {

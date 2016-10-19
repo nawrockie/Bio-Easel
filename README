@@ -1,8 +1,8 @@
 
 Bio-Easel
 
-version 0.02
-July 2016
+version 0.03
+October 2016
 
 The README is used to introduce the module and provide instructions on
 how to install the module, any machine dependencies it may have (for
@@ -22,8 +22,20 @@ be cloned from GitHub. Before you can do that you will
 need to create a 'src' directory. 
         mkdir src 
         (cd src; git clone https://github.com/EddyRivasLab/easel.git easel)
+        (cd src/easel; git checkout tags/0.43-Bio-Easel-0.03; rm -rf .git)
+  
+  ***The last line of commands will create output stating that you are
+     in a 'detached HEAD' state, which sounds bad. You can safely
+     ignore this. This is because we've checked out a specific commit
+     of the easel git repository. The final part of this command 'rm
+     -rf .git' removes all git related files so that src/easel is no
+     longer under git control anyway.  Part of the reason we do this
+     is as a precaution, so that you don't try to develop easel while
+     in this directory. To do that, you'll need to clone it again, and
+     you should only do that if you know what you're doing.
 
-Then, to install this module, run the following commands:
+Then, to install this module, run the following commands from the 
+top level Bio-Easel directory:
 
 	perl Makefile.PL
 	make
