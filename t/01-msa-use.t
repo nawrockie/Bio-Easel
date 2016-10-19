@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 165;
+use Test::More tests => 255;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -17,6 +17,7 @@ my $rf_alnfile    = "./t/data/test.rf.sto";
 my $rf_alnfile2   = "./t/data/test2.rf.sto";
 my $pknot_alnfile = "./t/data/test.pknot.rf.sto";
 my $gap_alnfile   = "./t/data/test-gap.sto";
+my $pp_alnfile    = "./t/data/test-pp.sto";
 my ($msa1, $msa2);
 my ($path, $nseq, $sqname, $sqidx, $any_gaps, $len, $avglen, $outfile, $id, $checksum, $format, $is_digitized);
 my ($line, $line1, $line2, $mode, $msa_str, $trash);
@@ -490,7 +491,7 @@ for($mode = 0; $mode <= 1; $mode++) {
   if(defined $msa1) { undef $msa1; }
 
   #################################
-  # test column_subset_rename_nse
+  # test column_subset_rename_nse, without do_append
   @usemeA = ();
   $msa1 = Bio::Easel::MSA->new({
       fileLocation => $rfamfile, 
@@ -525,6 +526,33 @@ for($mode = 0; $mode <= 1; $mode++) {
 
   if(defined $msa1) { undef $msa1; }
 
+  # one more time with appending coordinates instead of updating them
+  $msa1 = Bio::Easel::MSA->new({
+      fileLocation => $rfamfile, 
+      forceText    => $mode,
+  });
+  isa_ok($msa1, "Bio::Easel::MSA");
+  $alen = $msa1->alen;
+  # still removing first 3 and final 4 columns, so usemeA doesn't
+  # change
+  
+  $msa1->column_subset_rename_nse(\@usemeA, 0);
+
+  is($msa1->alen(), ($alen-7), "column_subset_rename_nse() removed correct number of columns.");
+ 
+  $sqname = $msa1->get_sqname(0);
+  is($sqname, "M15749.1/155-239/4-81", "column_subset_rename_nse() renamed sequence 1 properly.");
+  $sqname = $msa1->get_sqname(1);
+  is($sqname, "CP000653.1/2739273-2739189/4-81", "column_subset_rename_nse() renamed sequence 2 properly.");
+  $sqname = $msa1->get_sqname(2);
+  is($sqname, "CP000468.1/2032638-2032552/4-83", "column_subset_rename_nse() renamed sequence 3 properly.");
+  $sqname = $msa1->get_sqname(3);
+  is($sqname, "CP000857.1/1802194-1802277/4-80", "column_subset_rename_nse() renamed sequence 4 properly.");
+  $sqname = $msa1->get_sqname(4);
+  is($sqname, "CP001383.1/2080784-2080698/4-83", "column_subset_rename_nse() renamed sequence 5 properly.");
+
+  if(defined $msa1) { undef $msa1; }
+
   ################################################
   # remove_gap_rf_basepairs
   $msa1 = Bio::Easel::MSA->new({
@@ -543,6 +571,113 @@ for($mode = 0; $mode <= 1; $mode++) {
   $msa1->remove_gap_rf_basepairs(1); # 1 says 'do WUSSify'
   $ss_cons_str = ".::<<<_A__>->>:<<-<.a__.>>>.";
   is($msa1->get_ss_cons(), $ss_cons_str, "remove_gap_rf_basepairs seems to be working with WUSSifying");
+
+  if(defined $msa1) { undef $msa1; }
+
+
+  ################################################
+  # aligned_to_unaligned_pos
+  $msa1 = Bio::Easel::MSA->new({
+      fileLocation => $gap_alnfile, 
+      forceText    => $mode,
+  });
+  isa_ok($msa1, "Bio::Easel::MSA");
+
+  my ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(0, 2, 0);
+  my ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(0, 2, 1);
+  is($uapos_before,    -1, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before, -1, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,      1, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,   3, "aligned_to_unaligned_pos seems to be working.");
+
+  ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(1, 2, 0);
+  ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(1, 2, 1);
+  is($uapos_before,     1, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before,  1, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,      2, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,   3, "aligned_to_unaligned_pos seems to be working.");
+
+  ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(1, 3, 0);
+  ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(1, 3, 1);
+  is($uapos_before,     2, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before,  3, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,      2, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,   3, "aligned_to_unaligned_pos seems to be working.");
+
+  ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(0, 29, 0);
+  ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(0, 29, 1);
+  is($uapos_before,    24, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before, 28, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,     -1, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,  -1, "aligned_to_unaligned_pos seems to be working.");
+
+  ($uapos_before, $ret_apos_before) = $msa1->aligned_to_unaligned_pos(1, 29, 0);
+  ($uapos_after,  $ret_apos_after)  = $msa1->aligned_to_unaligned_pos(1, 29, 1);
+  is($uapos_before,    25, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_before, 29, "aligned_to_unaligned_pos seems to be working.");
+  is($uapos_after,     25, "aligned_to_unaligned_pos seems to be working.");
+  is($ret_apos_after,  29, "aligned_to_unaligned_pos seems to be working.");
+
+  if(defined $msa1) { undef $msa1; }
+
+  ################################################
+  # rfpos_to_aligned_pos
+  $msa1 = Bio::Easel::MSA->new({
+      fileLocation => $rf_alnfile, 
+      forceText    => $mode,
+  });
+  isa_ok($msa1, "Bio::Easel::MSA");
+
+  my $apos = $msa1->rfpos_to_aligned_pos(1, "~-_.");
+  is($apos, 2, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(2, "~-_.");
+  is($apos, 3, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(18, "~-_.");
+  is($apos, 19, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(19, "~-_.");
+  is($apos, 21, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(21, "~-_.");
+  is($apos, 23, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(22, "~-_.");
+  is($apos, 25, "rfpos_to_aligned_pos seems to be working.");
+
+  $apos = $msa1->rfpos_to_aligned_pos(24, "~-_.");
+  is($apos, 27, "rfpos_to_aligned_pos seems to be working.");
+
+  if(defined $msa1) { undef $msa1; }
+
+  ################################################
+  # get_pp_avg
+  $msa1 = Bio::Easel::MSA->new({
+      fileLocation => $pp_alnfile, 
+      forceText    => $mode,
+  });
+  isa_ok($msa1, "Bio::Easel::MSA");
+
+  my ($ppavg, $ppct) = $msa1->get_pp_avg(0, 1, 31);
+  $ppavg = int(($ppavg * 100) + 0.5);
+  is($ppavg, 84, "get_pp_avg seems to be working.");
+  is($ppct,  22, "get_pp_avg seems to be working.");
+
+  ($ppavg, $ppct) = $msa1->get_pp_avg(0, 28, 31);
+  $ppavg = int($ppavg);
+  is($ppavg, 0, "get_pp_avg seems to be working.");
+  is($ppct,  0, "get_pp_avg seems to be working.");
+
+  ($ppavg, $ppct) = $msa1->get_pp_avg(0, 25, 27);
+  $ppavg = int(($ppavg * 100) + 0.5);
+  is($ppavg, 40, "get_pp_avg seems to be working.");
+  is($ppct,  3,  "get_pp_avg seems to be working.");
+
+  ($ppavg, $ppct) = $msa1->get_pp_avg(2, 10, 20);
+  $ppavg = int(($ppavg * 100) + 0.5);
+  is($ppavg, 44, "get_pp_avg seems to be working.");
+  is($ppct,  11, "get_pp_avg seems to be working.");
 
   if(defined $msa1) { undef $msa1; }
 }
