@@ -34,7 +34,7 @@ my $outfile_dir  = "";    # dir for output files, pwd unless -odir is used
 
 my $usage;
 $usage  = "# esl-ssplit.pl :: split up an input sequence file into smaller files\n";
-$usage .= "# Bio-Easel 0.02 (July 2016)\n";
+$usage .= "# Bio-Easel 0.04 (Oct 2016)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-ssplit.pl [OPTIONS] <seqfile to split> <# seqs for each new file (or # new files if -n)>\n";
