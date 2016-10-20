@@ -1,0 +1,11 @@
+EPN, Thu Oct 20 10:57:06 2016
+
+List of files to update when doing a release (in a release branch or a
+hotfix branch). These files have one or more of a version number,
+date, or copyright information. Copyright information may not need to
+be updated, but version number and date always need to be updated.
+
+Files to update:
+LICENSE     (version, date and copyright)
+README      (version, date ***AND*** Easel tag in instructions)
+scripts/*pl (version and date)
