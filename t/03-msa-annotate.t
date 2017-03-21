@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 33;
+use Test::More tests => 45;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -19,14 +19,37 @@ for(my $mode = 0; $mode <= 1; $mode++) {
    });
    isa_ok($msa, "Bio::Easel::MSA");
 
-   # test addGF
-   $msa->addGF("BM", "cmbuild CM SEED");
    $outfile = "./t/data/test-msa-annot.out";
 
+   # test getAccession and getDesc, these should return "" before we
+   # set accession and desc
+   my $desc = $msa->getDesc;
+   is($desc, "", "getDesc correctly noted absence of desc annotation (mode $mode)");
+   my $acc = $msa->getAccession;
+   is($acc, "", "getAccession correctly noted absence of accession (mode $mode)");
+
+   # test setAccession, setDesc and addGF
+   $msa->setAccession("RF99999");
+   $msa->setDesc("Bogus RNA family");
+   $msa->addGF("BM", "cmbuild CM SEED");
+
+   # test getAccession and getDesc again
+   $desc = $msa->getDesc;
+   is($desc, "Bogus RNA family", "addDesc/getDesc correctly set/obtained valid description (mode $mode)");
+   $acc = $msa->getAccession;
+   is($acc, "RF99999", "addAccession/getAccession correctly set/obtained valid accession (mode $mode)");
+
+   # write out MSA and check they get printed properly
    $msa->write_msa($outfile);
 
    open(IN, $outfile) || die "ERROR unable to open $outfile";
    $line = <IN>;
+   $line = <IN>;
+   chomp $line;
+   is($line, "#=GF AC RF99999", "addAccession properly added accession annotation (mode $mode)");
+   $line = <IN>;
+   chomp $line;
+   is($line, "#=GF DE Bogus RNA family", "addAccession properly added accession annotation (mode $mode)");
    $line = <IN>;
    chomp $line;
    is($line, "#=GF BM cmbuild CM SEED", "addGF properly added GF annotation (mode $mode)");

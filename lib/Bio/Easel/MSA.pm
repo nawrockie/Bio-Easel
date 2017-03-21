@@ -1158,6 +1158,102 @@ sub rfam_qc_stats {
 
 #-------------------------------------------------------------------------------
 
+=head2 setDesc
+
+  Title    : setDesc
+  Incept   : EPN, Tue Mar 21 13:35:18 2017
+  Usage    : $msaObject->setDesc($value)
+  Function : Set the description line of an ESL_MSA object.
+  Args     : $value: text for the line
+  Returns  : void
+
+=cut
+
+sub setDesc {
+  my ( $self, $value ) = @_;
+
+  $self->_check_msa();
+  my $status = _c_setDesc( $self->{esl_msa}, $value );
+  if ( $status != $ESLOK ) { croak "ERROR: unable to set Desc annotation"; }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 setAccession
+
+  Title    : setAccession
+  Incept   : EPN, Tue Mar 21 13:36:34 2017
+  Usage    : $msaObject->setAccession($value)
+  Function : Set the accession field of an ESL_MSA object.
+  Args     : $value: text for the line
+  Returns  : void
+
+=cut
+
+sub setAccession {
+  my ( $self, $value ) = @_;
+
+  $self->_check_msa();
+  my $status = _c_setAccession( $self->{esl_msa}, $value );
+  if ( $status != $ESLOK ) { croak "ERROR: unable to set Accession"; }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getDesc
+
+  Title    : getDesc
+  Incept   : EPN, Tue Mar 21 10:18:25 2017
+  Usage    : $msaObject->getDesc()
+  Function : Return description line of an ESL_MSA
+           : as a string, or "" if it does not exist
+  Args     : none
+  Returns  : $descstr: desc annotation, as a string.
+
+=cut
+
+sub getDesc {
+  my ( $self ) = @_;
+
+  $self->_check_msa();
+  if(! (_c_hasDesc( $self->{esl_msa} ))) { 
+    return "";
+  }
+  else { 
+    return _c_getDesc( $self->{esl_msa} );
+  }
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getAccession
+
+  Title    : getAccession
+  Incept   : EPN, Tue Mar 21 10:20:41 2017
+  Usage    : $msaObject->getAccession()
+  Function : Return accession field of an ESL_MSA
+           : as a string, or "" if it does not exist
+  Args     : none
+  Returns  : $accstr: accession, as a string.
+
+=cut
+
+sub getAccession {
+  my ( $self ) = @_;
+
+  $self->_check_msa();
+  if(! (_c_hasAccession( $self->{esl_msa} ))) { 
+    return "";
+  }
+  else { 
+    return _c_getAccession( $self->{esl_msa} );
+  }
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 addGF
 
   Title    : addGF
