@@ -22,7 +22,7 @@ my $use_weights = 0;    # TRUE to use sequence weights
 
 my $usage;
 $usage  = "# esl-alidpair.pl :: remove consensus basepairs based on alignment posterior probabilities\n";
-$usage .= "# Bio-Easel 0.04 (Oct 2016)\n";
+$usage .= "# Bio-Easel 0.05 (Mar 2017)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-alidepair.pl [OPTIONS] <alignment file to work on> <name of output alignment file>\n";
