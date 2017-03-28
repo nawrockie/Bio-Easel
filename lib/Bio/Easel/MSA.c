@@ -832,7 +832,6 @@ float _c_average_sqlen(ESL_MSA *msa)
 int _c_setDesc(ESL_MSA *msa, char *value)
 {
   int    status;
-  printf("calling esl_msa_SetDesc with value: %s\n", value);
   status = esl_msa_SetDesc(msa, value, -1);
   return status;
 }
