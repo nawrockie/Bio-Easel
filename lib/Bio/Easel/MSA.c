@@ -824,6 +824,73 @@ float _c_average_sqlen(ESL_MSA *msa)
 }
 
 
+/* Function:  _c_setDesc()
+ * Incept:    EPN, Tue Mar 21 13:37:18 2017
+ * Purpose:   Set description line of an MSA.
+ * Returns:   eslOK on success, ! eslOK on failure.
+ */
+int _c_setDesc(ESL_MSA *msa, char *value)
+{
+  int    status;
+  printf("calling esl_msa_SetDesc with value: %s\n", value);
+  status = esl_msa_SetDesc(msa, value, -1);
+  return status;
+}
+
+/* Function:  _c_setAccession()
+ * Incept:    EPN, Tue Mar 21 13:38:11 2017
+ * Purpose:   Set accession field of an MSA.
+ * Returns:   eslOK on success, ! eslOK on failure.
+ */
+int _c_setAccession(ESL_MSA *msa, char *value)
+{
+  int    status;
+  status = esl_msa_SetAccession(msa, value, -1);
+  return status;
+}
+
+/* Function:  _c_hasDesc()
+ * Incept:    EPN, Tue Mar 21 10:21:33 2017
+ * Purpose:   Return 1 if MSA has desc annotation.
+ * Returns:   1 if msa->desc exists, else 0
+ */
+int _c_hasDesc(ESL_MSA *msa)
+{
+  return (msa->desc) ? 1 : 0;
+}
+
+/* Function:  _c_hasAccession()
+ * Incept:    EPN, Tue Mar 21 10:22:28 2017
+ * Purpose:   Return 1 if MSA has accession.
+ * Returns:   1 if msa->acc exists, else 0
+ */
+int _c_hasAccession(ESL_MSA *msa)
+{
+  return (msa->acc) ? 1 : 0;
+}
+
+/* Function:  _c_getDesc()
+ * Incept:    EPN, Tue Mar 21 10:23:10 2017
+ * Purpose:   Return MSA's desc if it exists, else croak.
+ * Returns:   msa->desc if it exists, else croak
+ */
+char *_c_getDesc(ESL_MSA *msa)
+{
+  if(msa->desc) return msa->desc;
+  croak("_c_getDesc: desc does not exist");
+}
+
+/* Function:  _c_getAccession()
+ * Incept:    EPN, Tue Mar 21 10:24:31 2017
+ * Purpose:   Return MSA's acc if it exists, else croak.
+ * Returns:   msa->acc if it exists, else croak
+ */
+char *_c_getAccession(ESL_MSA *msa)
+{
+  if(msa->acc) return msa->acc;
+  croak("_c_getAcc: desc does not exist");
+}
+
 /* Function:  _c_addGF()
  * Incept:    EPN, Sat Feb  2 14:48:47 2013
  * Purpose:   Add GF annotation to MSA.
