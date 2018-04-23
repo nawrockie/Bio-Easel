@@ -397,6 +397,30 @@ sub fetch_seq_to_fasta_string {
   return _c_fetch_seq_to_fasta_string($self->{esl_sqfile}, $seqname, $textw); 
 }
 
+=head2 fetch_seq_to_fasta_string_given_ssi_number
+
+  Title    : fetch_seq_to_fasta_string_given_ssi_number
+  Incept   : EPN, Mon Apr 23 11:24:00 2018
+  Usage    : Bio::Easel::SqFile->fetch_seq_to_fasta_string_given_ssi_number
+  Function : Fetches sequence with SSI index $idx from a sequence file and returns it as a FASTA string 
+  Args     : $num   : index of desired sequence in SSI file
+             $textw : width of FASTA seq lines, -1 for unlimited, if !defined $FASTATEXTW is used
+  Returns  : string, the sequence in FASTA format
+  Dies     : upon error in _c_fetch_seq_to_fasta_string_given_ssi_number(), with C croak() call
+
+=cut
+
+sub fetch_seq_to_fasta_string_given_ssi_number {
+  my ( $self, $num, $textw ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  if(! defined $textw) { $textw = $FASTATEXTW; }
+
+  return _c_fetch_seq_to_fasta_string_given_ssi_number($self->{esl_sqfile}, $num, $textw); 
+}
+
 =head2 fetch_subseqs
 
   Title    : fetch_subseqs
