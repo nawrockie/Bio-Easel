@@ -52,6 +52,17 @@ $usage .= "\t\t-v        : be verbose with output to stdout, default is to outpu
 $usage .= "\t\t-d        : dirty mode: leave temporary files on disk (e.g. .ssi index file)\n";
 $usage .= "\t\t-oroot <s>: name output files <s> with integer suffix, default is to use input seq file name\n";
 $usage .= "\t\t-odir  <s>: output files go into dir <s>, default is pwd\n";
+$usage .= "\n";
+$usage .= "\tEXAMPLES:\n";
+$usage .= "\t\t'esl-ssplit.pl input.fa 10':\n";
+$usage .= "\t\t\tsplit input.fa into M files with 10 sequences; creates files input.fa.1 .. input.fa.N\n\n";
+$usage .= "\t\t'esl-ssplit.pl -n input.fa 10':\n";
+$usage .= "\t\t\tsplit input.fa into 10 files with N sequences; creates files input.fa.1 .. input.fa.10\n\n";
+$usage .= "\t\t'esl-ssplit.pl -n -r input.fa 10':\n";
+$usage .= "\t\t\tsplit input.fa into 10 files with roughly same number of residues/nucleotides\n\t\t\tper file; creates files input.fa.1 .. input.fa.10\n\n";
+$usage .= "\t\t'esl-ssplit.pl -n -r -z input.fa 10':\n";
+$usage .= "\t\t\t*randomize order of sequences* and split input.fa into 10 files with roughly same\n\t\t\tnumber of residues/nucleotides per file; creates files: input.fa.1 .. input.fa.10\n\n";
+$usage .= "\tNOTE: unless -z is used, sequences will be output in the order they appear in the input file\n";
 
 if(scalar(@ARGV) != 2) { die $usage; }
 ($in_sqfile, $nseq_per) = @ARGV;
