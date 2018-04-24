@@ -6,7 +6,7 @@
 # EPN, Thu Jan 16 09:49:03 2014
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 14;
+use Test::More tests => 17;
 
 BEGIN {
   use_ok( 'Bio::Easel::SqFile' ) || print "Bail out!\n";
@@ -17,21 +17,24 @@ my $scriptdir = "./scripts/";
 my $miniappdir = "./src/easel/miniapps/";
 
 # first run three main modes with three different input files.
-my @arg1A     = ("rna-10Kb.fa", "rna-1Mb.fa", "aa-10k.fa"); # the three test files, command line argument for test 1
-my @arg2A     = ("3",           "7",          "100");       # command line argument for each test file
-my @nfiles1A  = ("7",           "22",         "101");       # number of files generated for each test file for default options
-my @nfiles2A  = ("3",           "7",          "100");       # number of files generated for each test file for -n option
-my @nfiles3A  = ("3",           "7",          "100");       # number of files generated for each test file for -n and -r option
+my @arg1A     = ("rna-10Kb.fa",   "rna-1Mb.fa",   "aa-10k.fa");   # the three test files, command line argument for test 1
+my @zarg1A    = ("z.rna-10Kb.fa", "z.rna-1Mb.fa", "z.aa-10k.fa"); # the three test files, with seqs in random order for testing -z
+my @arg2A     = ("3",             "7",            "100");         # command line argument for each test file
+my @nfiles1A  = ("7",             "22",           "101");         # number of files generated for each test file for default options
+my @nfiles2A  = ("3",             "7",            "100");         # number of files generated for each test file for -n option
+my @nfiles3A  = ("3",             "7",            "100");         # number of files generated for each test file for -n and -r option
+my @nfiles4A  = ("3",             "7",            "100");         # number of files generated for each test file for -n and -r and -z option
 my $ntestfiles = 3;
 
 my @unlinkA    = ();     # array of files to unlink after each test
-my @reqdfilesA = @arg1A; # list of files to copy to current dir 
+my @reqdfilesA = (@arg1A, @zarg1A); # list of files to copy to current dir 
 copy_orig_files($datadir, \@reqdfilesA);
 push(@unlinkA, @reqdfilesA);
 
 for(my $f = 0; $f < $ntestfiles; $f++) { 
-  my $arg1 = $arg1A[$f];
-  my $arg2 = $arg2A[$f];
+  my $arg1  = $arg1A[$f];
+  my $arg2  = $arg2A[$f];
+  my $zarg1 = $zarg1A[$f];
 
   # test default parameters 
   run_command($scriptdir . "/esl-ssplit.pl $arg1 $arg2");
@@ -48,6 +51,12 @@ for(my $f = 0; $f < $ntestfiles; $f++) {
   run_command($scriptdir . "/esl-ssplit.pl -n -r $arg1 $arg2");
   $diff = concatenate_reformat_and_diff($miniappdir, $arg1, $arg1, $nfiles3A[$f]);
   is($diff, "", "esl-ssplit $arg1 split correctly with -n and -r options");
+
+  # test -n and -r and -z, compare against randomly constructed file, only on first 
+  run_command($scriptdir . "/esl-ssplit.pl -n -r -z $arg1 $arg2");
+  # note we pass in $zarg1, this is the version of the file with sequences in random order
+  $diff = concatenate_reformat_and_diff($miniappdir, $zarg1, $arg1, $nfiles4A[$f]);
+  is($diff, "", "esl-ssplit $arg1 split correctly with -n and -r and -z options");
 }
 
 # now test other options: -d -oroot and -odir
