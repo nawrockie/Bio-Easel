@@ -198,7 +198,7 @@ else {
 
     # if $do_randomize, choose the file to output to
     if($do_randomize) { 
-      $ridx  = $rng->roll($nopen - 1);
+      $ridx = $rng->roll($nopen);
       $fidx = $map_A[$ridx];
       $FH = $out_FH_A[$fidx];
     }
