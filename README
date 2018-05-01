@@ -1,7 +1,7 @@
 Bio-Easel
 
-version 0.05
-March 2017
+version 0.06
+April 2018
 
 The README is used to introduce the module and provide instructions on
 how to install the module, any machine dependencies it may have (for
@@ -21,7 +21,7 @@ be cloned from GitHub. Before you can do that you will
 need to create a 'src' directory. 
         mkdir src 
         (cd src; git clone https://github.com/EddyRivasLab/easel.git easel)
-        (cd src/easel; git checkout tags/Bio-Easel-0.05; rm -rf .git)
+        (cd src/easel; git checkout tags/Bio-Easel-0.06; rm -rf .git)
   
   ***The last line of commands will create output stating that you are
      in a 'detached HEAD' state, which sounds bad. You can safely
