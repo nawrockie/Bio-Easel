@@ -256,6 +256,52 @@ SV *_c_fetch_seq_to_fasta_string (ESL_SQFILE *sqfp, char *key, int textw)
   return seqstringSV;
 }
 
+/* Function:  _c_fetch_seq_to_fasta_string_given_ssi_number()
+ * Incept:    EPN, Mon Apr 23 11:18:17 2018
+ * Synopsis:  Fetch a sequence from an open sequence file given its
+ *            SSI index number (see _c_fetch_seq_to_fasta_string() for
+ *            fetching by key (seqname or accn)) and return it as a FASTA
+ *            formatted string.
+ * Args:      sqfp  - open ESL_SQFILE to fetch seq from
+ *            nkey  - index of the key to return
+ *            textw - width for each sequence of FASTA record, -1 for unlimited.
+ * Returns:   A pointer to a string that is the sequence in FASTA format.
+ * Dies:      if problem reading sequence
+ */
+SV *_c_fetch_seq_to_fasta_string_given_ssi_number (ESL_SQFILE *sqfp, int nkey, int textw)
+{
+
+  int     status;                /* Easel status code */
+  ESL_SQ *sq = esl_sq_Create();  /* the sequence */
+  char   *seqstring = NULL;      /* the sequence string */
+  SV     *seqstringSV;           /* SV version of seqstring */
+  int64_t n;                     /* length of seqstring */
+
+  /* make sure textw makes sense and we're not in digital mode */
+  if(textw < 0 && textw != -1) croak("invalid value for textw\n"); 
+  if (sq->dsq)                 croak("sequence file is unexpectedly digitized\n");
+
+  /* adapted from esl-sfetch.c's onefetch() for PositionByNumber instead of PositionByKey */
+  if (sqfp->data.ascii.ssi == NULL) croak("sequence file has no SSI information\n"); 
+  status = esl_sqfile_PositionByNumber(sqfp, nkey);
+  if      (status == eslENOTFOUND) croak("seq index %d not found in SSI index for file %s\n", nkey, sqfp->filename); 
+  else if (status == eslEFORMAT)   croak("Failed to parse SSI index for %s\n", sqfp->filename);
+  else if (status != eslOK)        croak("Failed to look up location of seq index %d in SSI index of file %s\n", nkey, sqfp->filename);
+
+  status = esl_sqio_Read(sqfp, sq);
+  if      (status == eslEFORMAT) croak("Parse failed (sequence file %s):\n%s\n",  sqfp->filename, esl_sqfile_GetErrorBuf(sqfp));
+  else if (status == eslEOF)     croak("Unexpected EOF reading sequence file %s\n", sqfp->filename);
+  else if (status != eslOK)      croak("Unexpected error %d reading sequence file %s\n", status, sqfp->filename);
+
+  seqstring = _c_sq_to_seqstring(sq, textw, sq->name, &n);
+  esl_sq_Destroy(sq);
+
+  seqstringSV = newSVpv(seqstring, n);
+  free(seqstring);
+
+  return seqstringSV;
+}
+
 /* Function:  _c_fetch_next_seq_to_fasta_string()
  * Incept:    EPN, Fri Mar  8 05:51:49 2013
  * Synopsis:  Fetch the next sequence from an open sequence file and return it as a 

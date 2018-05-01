@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 11;
+use Test::More tests => 14;
 
 BEGIN {
     use_ok( 'Bio::Easel::SqFile' ) || print "Bail out!\n";
@@ -24,6 +24,18 @@ is($path, "./t/data/trna-100.fa");
 # test fetch_seq_to_fasta_string with no line length
 my $seqstring = $sqfile->fetch_seq_to_fasta_string("tRNA5-sample33");
 is ($seqstring, ">tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCC\nGCUUGGUGAUA\n");
+
+# test fetch_seq_to_fasta_string_given_ssi_number with no line length
+$seqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33);
+is ($seqstring, ">tRNA5-sample39\nUCCUCCUUAACCGAAUGGUAUGGUUCCCGCCAUUCAAGCGGGCGAUCAUAUGUUCAAUCC\nAUAUAGGAGGCA\n");
+
+# test fetch_seq_to_fasta_string_given_ssi_number with line length of 42
+$seqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33, 42);
+is ($seqstring, ">tRNA5-sample39\nUCCUCCUUAACCGAAUGGUAUGGUUCCCGCCAUUCAAGCGGG\nCGAUCAUAUGUUCAAUCCAUAUAGGAGGCA\n");
+
+# test fetch_seq_to_fasta_string_given_ssi_number with unlimited line length
+$seqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33, -1);
+is ($seqstring, ">tRNA5-sample39\nUCCUCCUUAACCGAAUGGUAUGGUUCCCGCCAUUCAAGCGGGCGAUCAUAUGUUCAAUCCAUAUAGGAGGCA\n");
 
 # test fetch_seq_to_fasta_string with unlimited line length
 $seqstring = $sqfile->fetch_seq_to_fasta_string("tRNA5-sample33", -1);
