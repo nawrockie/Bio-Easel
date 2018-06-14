@@ -17,13 +17,13 @@ my $scriptdir = "./scripts/";
 my $miniappdir = "./src/easel/miniapps/";
 
 # first run three main modes with three different input files.
-my @arg1A     = ("rna-10Kb.fa",   "rna-1Mb.fa",   "aa-10k.fa");   # the three test files, command line argument for test 1
-my @zarg1A    = ("z.rna-10Kb.fa", "z.rna-1Mb.fa", "z.aa-10k.fa"); # the three test files, with seqs in random order for testing -z
-my @arg2A     = ("3",             "7",            "100");         # command line argument for each test file
-my @nfiles1A  = ("7",             "22",           "101");         # number of files generated for each test file for default options
-my @nfiles2A  = ("3",             "7",            "100");         # number of files generated for each test file for -n option
-my @nfiles3A  = ("3",             "7",            "100");         # number of files generated for each test file for -n and -r option
-my @nfiles4A  = ("3",             "7",            "100");         # number of files generated for each test file for -n and -r and -z option
+my @arg1A     = ("rna-10Kb.fa",        "rna-1Mb.fa",        "aa-10k.fa");        # the three test files, command line argument for test 1
+my @zarg1A    = ("sort.z.rna-10Kb.fa", "sort.z.rna-1Mb.fa", "sort.z.aa-10k.fa"); # the three test files, with seqs in random order for testing -z
+my @arg2A     = ("3",                  "7",                 "100");              # command line argument for each test file
+my @nfiles1A  = ("7",                  "22",                "101");              # number of files generated for each test file for default options
+my @nfiles2A  = ("3",                  "7",                 "100");              # number of files generated for each test file for -n option
+my @nfiles3A  = ("3",                  "7",                 "100");              # number of files generated for each test file for -n and -r option
+my @nfiles4A  = ("3",                  "7",                 "100");              # number of files generated for each test file for -n and -r and -z option
 my $ntestfiles = 3;
 
 my @unlinkA    = ();     # array of files to unlink after each test
@@ -39,23 +39,23 @@ for(my $f = 0; $f < $ntestfiles; $f++) {
   # test default parameters 
   run_command($scriptdir . "/esl-ssplit.pl $arg1 $arg2");
   # test the output by concatenating, reformatting and diff'ing against original file
-  my $diff = concatenate_reformat_and_diff($miniappdir, $arg1, $arg1, $nfiles1A[$f]);
+  my $diff = concatenate_reformat_maybe_sort_and_diff($miniappdir, $arg1, $arg1, $nfiles1A[$f], 0); # 0: don't sort before diff
   is($diff, "", "esl-ssplit $arg1 split correctly with default parameters");
 
   # test -n
   run_command($scriptdir . "/esl-ssplit.pl -n $arg1 $arg2");
-  $diff = concatenate_reformat_and_diff($miniappdir, $arg1, $arg1, $nfiles2A[$f]);
+  $diff = concatenate_reformat_maybe_sort_and_diff($miniappdir, $arg1, $arg1, $nfiles2A[$f], 0); # 0: don't sort before diff
   is($diff, "", "esl-ssplit $arg1 split correctly with -n option");
 
   # test -n and -r 
   run_command($scriptdir . "/esl-ssplit.pl -n -r $arg1 $arg2");
-  $diff = concatenate_reformat_and_diff($miniappdir, $arg1, $arg1, $nfiles3A[$f]);
+  $diff = concatenate_reformat_maybe_sort_and_diff($miniappdir, $arg1, $arg1, $nfiles3A[$f], 0); # 0: don't sort before diff 
   is($diff, "", "esl-ssplit $arg1 split correctly with -n and -r options");
 
   # test -n and -r and -z, compare against randomly constructed file, only on first 
   run_command($scriptdir . "/esl-ssplit.pl -n -r -z $arg1 $arg2");
   # note we pass in $zarg1, this is the version of the file with sequences in random order
-  $diff = concatenate_reformat_and_diff($miniappdir, $zarg1, $arg1, $nfiles4A[$f]);
+  $diff = concatenate_reformat_maybe_sort_and_diff($miniappdir, $zarg1, $arg1, $nfiles4A[$f], 1); # 1: do sort before diff
   is($diff, "", "esl-ssplit $arg1 split correctly with -n and -r and -z options");
 }
 
@@ -65,7 +65,7 @@ my $arg2 = $arg2A[0];
 
 # test -d
 run_command($scriptdir . "/esl-ssplit.pl -d $arg1 $arg2");
-my $diff = concatenate_reformat_and_diff($miniappdir, $arg1, $arg1, $nfiles1A[0]);
+my $diff = concatenate_reformat_maybe_sort_and_diff($miniappdir, $arg1, $arg1, $nfiles1A[0], 0); # 0: don't sort before diff 
 is($diff, "", "esl-ssplit $arg1 split correctly with -d");
 my $ssi_exists = (-e $arg1.".ssi") ? 1 : 0;
 is($ssi_exists, 1, "esl-ssplit -d correctly leaves .ssi file with -d option.");
@@ -74,13 +74,13 @@ push(@unlinkA, $arg1.".ssi");
 # test -oroot
 my $oroot = "root";
 run_command($scriptdir . "/esl-ssplit.pl -oroot $oroot $arg1 $arg2");
-$diff = concatenate_reformat_and_diff($miniappdir, $arg1, $oroot, $nfiles1A[0]);
+$diff = concatenate_reformat_maybe_sort_and_diff($miniappdir, $arg1, $oroot, $nfiles1A[0], 0); # 0: don't sort before diff 
 is($diff, "", "esl-ssplit $arg1 split correctly with -oroot $oroot option");
 
 # test -odir
 my $odir = $datadir . "/";
 run_command($scriptdir . "/esl-ssplit.pl -odir $odir $arg1 $arg2");
-$diff = concatenate_reformat_and_diff($miniappdir, $arg1, $odir . $arg1, $nfiles1A[0]);
+$diff = concatenate_reformat_maybe_sort_and_diff($miniappdir, $arg1, $odir . $arg1, $nfiles1A[0], 0); # 0: don't sort before diff 
 is($diff, "", "esl-ssplit $arg1 split correctly with -odir $odir option");
 
 clean_up(\@unlinkA);
@@ -117,9 +117,9 @@ sub copy_orig_files {
   return;
 }
 ###############
-sub concatenate_reformat_and_diff { 
-  if(scalar(@_) != 4) { die "ERROR concatenate_reformat_and_diff entered with wrong number of input args"; }
-  my ($miniappdir, $origfile, $smallfileroot, $nfiles) = (@_);
+sub concatenate_reformat_maybe_sort_and_diff { 
+  if(scalar(@_) != 5) { die "ERROR concatenate_reformat_maybe_sort_and_diff entered with wrong number of input args"; }
+  my ($miniappdir, $origfile, $smallfileroot, $nfiles, $do_sort) = (@_);
 
   my $testfile    = "test.fa";
   my $rf_testfile = "test.rf.fa";
@@ -135,7 +135,12 @@ sub concatenate_reformat_and_diff {
   run_command($cmd);
 
   # reformat with esl-reformat
-  $cmd = $miniappdir . "esl-reformat fasta $testfile > $rf_testfile";
+  if($do_sort) { 
+    $cmd = $miniappdir . "esl-reformat fasta $testfile | sort > $rf_testfile";
+  }
+  else { 
+    $cmd = $miniappdir . "esl-reformat fasta $testfile > $rf_testfile";
+  }
   run_command($cmd);
 
   # compare with diff
