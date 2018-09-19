@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 14;
+use Test::More tests => 16;
 
 BEGIN {
     use_ok( 'Bio::Easel::SqFile' ) || print "Bail out!\n";
@@ -20,6 +20,13 @@ isa_ok($sqfile2, "ESL_SQFILE");
 # test path
 my $path = $sqfile->path;
 is($path, "./t/data/trna-100.fa");
+
+# test check_seq_exists
+my $exists = $sqfile->check_seq_exists("tRNA5-sample33");
+is ($exists, "1");
+
+$exists = $sqfile->check_seq_exists("tRNA6-sample33");
+is ($exists, "0");
 
 # test fetch_seq_to_fasta_string with no line length
 my $seqstring = $sqfile->fetch_seq_to_fasta_string("tRNA5-sample33");
