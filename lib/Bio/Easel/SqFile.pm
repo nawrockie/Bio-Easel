@@ -15,7 +15,7 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.08';
 # Easel status codes, these must be consistent with #define's in Bio-Easel/src/easel/easel.h
 our $ESLOK =              '0';    # no error/success            
 our $ESLFAIL =            '1';    # failure                     
@@ -678,7 +678,8 @@ sub check_subseq_exists {
   $self->_check_sqfile();
   $self->_check_ssi();
 
-  my $L = _c_fetch_seq_length_given_namecheck_seq_exists($self->{esl_sqfile}, $sqname);
+  # fetch length to see if (a) seq exists and (b) coords are valid
+  my $L = _c_fetch_seq_length_given_name($self->{esl_sqfile}, $sqname);
   if($L == -1) { 
     return -1; # sequence $sqname does not exist
   }
