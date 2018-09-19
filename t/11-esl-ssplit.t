@@ -17,13 +17,13 @@ my $scriptdir = "./scripts/";
 my $miniappdir = "./src/easel/miniapps/";
 
 # first run three main modes with three different input files.
-my @arg1A     = ("rna-10Kb.fa",        "rna-1Mb.fa",        "aa-10k.fa");        # the three test files, command line argument for test 1
-my @zarg1A    = ("sort.z.rna-10Kb.fa", "sort.z.rna-1Mb.fa", "sort.z.aa-10k.fa"); # the three test files, with seqs in random order for testing -z
-my @arg2A     = ("3",                  "7",                 "100");              # command line argument for each test file
-my @nfiles1A  = ("7",                  "22",                "101");              # number of files generated for each test file for default options
-my @nfiles2A  = ("3",                  "7",                 "100");              # number of files generated for each test file for -n option
-my @nfiles3A  = ("3",                  "7",                 "100");              # number of files generated for each test file for -n and -r option
-my @nfiles4A  = ("3",                  "7",                 "100");              # number of files generated for each test file for -n and -r and -z option
+my @arg1A     = ("rna-10Kb.fa",         "rna-1Mb.fa",        "aa-10k.fa");          # the three test files, command line argument for test 1
+my @zarg1A    = ("sort.z.rna-10Kb.seq", "sort.z.rna-1Mb.seq", "sort.z.aa-10k.seq"); # the three test files, with seqs in random order for testing -z
+my @arg2A     = ("3",                   "7",                  "100");               # command line argument for each test file
+my @nfiles1A  = ("7",                   "22",                 "101");               # number of files generated for each test file for default options
+my @nfiles2A  = ("3",                   "7",                  "100");               # number of files generated for each test file for -n option
+my @nfiles3A  = ("3",                   "7",                  "100");               # number of files generated for each test file for -n and -r option
+my @nfiles4A  = ("3",                   "7",                  "100");               # number of files generated for each test file for -n and -r and -z option
 my $ntestfiles = 3;
 
 my @unlinkA    = ();     # array of files to unlink after each test
@@ -93,7 +93,7 @@ sub run_command {
   if(scalar(@_) != 1) { die "ERROR run_command entered with wrong number of input args"; }
   my ($cmd) = (@_);
   system($cmd);
-  if($? != 0) { die "ERROR command $cmd failed"; }
+  if($? != 0) { die "ERROR command $cmd failed (\$? = $?)"; }
   return;
 }
 ###############
@@ -136,7 +136,7 @@ sub concatenate_reformat_maybe_sort_and_diff {
 
   # reformat with esl-reformat
   if($do_sort) { 
-    $cmd = $miniappdir . "esl-reformat fasta $testfile | sort > $rf_testfile";
+    $cmd = $miniappdir . "esl-reformat fasta $testfile | grep -v \^\\> | sort > $rf_testfile"; # remove FASTA header lines, '>' character seems to get sorted differently on different systems
   }
   else { 
     $cmd = $miniappdir . "esl-reformat fasta $testfile > $rf_testfile";
