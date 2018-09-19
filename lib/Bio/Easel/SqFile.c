@@ -487,6 +487,35 @@ long _c_fetch_seq_length_given_name(ESL_SQFILE *sqfp, char *sqname) {
   return L;
 }
 
+/* Function:  _c_check_seq_exists()
+ * Incept:    EPN, Wed Sep 19 11:34:12 2018
+ * Purpose:   Check if a sequence exists given its name (primary key).
+ * Args:      sqfp   - open ESL_SQFILE to fetch seq from
+ *            sqname - name of sequence we want the length of
+ *
+ * Returns:   '1' if sequence <sqname> exists in <sqfp>,
+ *            '0' if sequence <sqname> does not exist in <sqfp>
+ * Dies:      if out of memory or somethings wrong with the SSI file
+ */
+
+long _c_check_seq_exists(ESL_SQFILE *sqfp, char *sqname) { 
+  int      status;   /* Easel status code */
+  uint16_t fh;       /* file handle sequence is in, irrelevant since we only have 1 file */
+  off_t    roff;     /* offset of start of sqname's record, irrelevant here */
+
+  /* make sure SSI is valid */
+  if (sqfp->data.ascii.ssi == NULL) croak("sequence file has no SSI information\n"); 
+
+  /* look-up sequence */
+  status = esl_ssi_FindName(sqfp->data.ascii.ssi, sqname, &fh, &roff, NULL, NULL);
+  if     (status == eslEMEM)      croak("out of memory");
+  else if(status == eslEFORMAT)   croak("error fetching sequence name %s, something wrong with SSI index?\n", sqname);
+  else if(status == eslENOTFOUND) return 0; /* seq does not exist, return '0' */
+  else if(status != eslOK)        croak("error fetching sequence name %s\n", sqname);
+
+  return 1; /* if we get here, seq exists */
+}
+
 /* Function:  _c_nseq_ssi
  * Incept:    EPN, Mon Apr  8 13:05:39 2013
  * Purpose:   Return the number of sequences in a sequence file.

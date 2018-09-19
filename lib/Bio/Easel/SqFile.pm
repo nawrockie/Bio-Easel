@@ -630,6 +630,64 @@ sub fetch_seq_length_given_name {
   return _c_fetch_seq_length_given_name($self->{esl_sqfile}, $sqname);
 }
 
+=head2 check_seq_exists
+
+  Title    : check_seq_exists()
+  Incept   : EPN, Wed Sep 19 11:32:08 2018
+  Usage    : Bio::Easel::SqFile->check_seq_exists($sqname)
+  Function : Looks up a sequence named <$sqname> in the SSI 
+           : index for an open sequence file. Returns '1' if it exists
+           : and '0' if it does not. 
+  Args     : $sqname: name of sequence
+  Returns  : '1' if sequence exists in the sqfile, '0' if it does not
+  Dies     : upon error in _c_check_seq_exists() with C croak() call
+
+=cut
+    
+sub check_seq_exists {
+  my ( $self, $sqname ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  return _c_check_seq_exists($self->{esl_sqfile}, $sqname);
+}
+
+=head2 check_subseq_exists
+
+  Title    : check_subseq_exists()
+  Incept   : EPN, Wed Sep 19 11:32:08 2018
+  Usage    : Bio::Easel::SqFile->check_subseq_exists($sqname, $start, $end)
+  Function : Looks up a sequence named <$sqname> in the SSI 
+           : index for an open sequence file. Returns '1' if it exists
+           : and $start and $end are both in range 1..L (subseq exists)
+           : '-0' if sequence exists but either $start and/or $end are 
+           : not in range 1..L, and '-1' if sequence does not exist.
+  Args     : $sqname: name of sequence
+           : $start:  start position of sequence
+           : $end:    end position of sequence
+  Returns  : '1'  if subsequence exists in the sqfile,
+           : '0' if sequence exists but subseq coordinates are out of range
+           : '-1' if sequence does not exist at all
+  Dies     : upon error in _c_fetch_seq_length_given_name() with C croak() call
+=cut
+    
+sub check_subseq_exists {
+  my ( $self, $sqname, $start, $end ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  my $L = _c_fetch_seq_length_given_namecheck_seq_exists($self->{esl_sqfile}, $sqname);
+  if($L == -1) { 
+    return -1; # sequence $sqname does not exist
+  }
+  if($start >= 1 && $start <= $L && $end >= 1 && $end <= $L) { 
+    return 1; # subseq exists
+  }
+  return 0; # sequence $sqname exists but subseq does not
+}
+
 =head2 nseq_ssi
 
   Title    : nseq_ssi
