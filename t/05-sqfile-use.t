@@ -27,8 +27,10 @@ $sqfile = Bio::Easel::SqFile->new({
 isa_ok($sqfile, "Bio::Easel::SqFile");
 undef $sqfile;
 
-# now do all tests with in both digital (mode == 0) and text (mode == 1) modes
+# now do all tests with in both text (mode == 0) and digital (mode == 1) modes
 for($mode = 0; $mode <= 1; $mode++) { 
+  undef $sqfile;
+
   $sqfile = Bio::Easel::SqFile->new({
       fileLocation => $infile, 
       forceDigital => $mode,

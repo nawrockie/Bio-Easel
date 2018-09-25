@@ -401,7 +401,6 @@ SV *_c_fetch_subseq_to_fasta_string (ESL_SQFILE *sqfp, char *key, char *newname,
   /* make sure textw makes sense */
   if(textw < 0 && textw != -1) croak("invalid value for textw\n"); 
   /* make sure we're not in digital mode, and SSI is valid */
-  if (sq->dsq)                      croak("sequence file is unexpectedly digitized\n");
   if (sqfp->data.ascii.ssi == NULL) croak("sequence file has no SSI information\n"); 
 
   /* reverse complement indicated by coords. */
