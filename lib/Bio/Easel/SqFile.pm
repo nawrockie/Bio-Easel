@@ -743,19 +743,19 @@ sub check_subseq_exists {
   Title    : compare_seq_to_seq()
   Incept   : EPN, Mon Sep 24 20:59:06 2018
   Usage    : Bio::Easel::SqFile->compare_seq_to_seq($sqfile2, $sqname)
-  Function : Looks up a sequence named <$sqname> in the SSI 
-           : index for an open sequence file and a sequence with the
-           : same name in another open sequence file <$sqfile2> and
-           : compares the two sequences for identity.
-  Args     : $sqfile2: name of second sequence file (first is $self)
-           : $seqname: name of sequence
-  Returns  : '1' if seq <$sqname> exists in both sequence files and is identical
-           : '0' if seq <$sqname> exists in both sequence files and is not identical
+  Function : Fetches a full sequence named <$sqname1> in $self, 
+           : and a full sequence named  <$sqname2> in $sqfile2, 
+           : and compare that the sequences are identical. 
+  Args     : $sqfile2:  name of second sequence file (first is $self)
+           : $seqname1: name of sequence in sequence file 1
+           : $seqname2: name of sequence in sequence file 2
+  Returns  : '1' if seqs exist in respective sequence files and is identical
+           : '0' if seqs exist in respective sequence files and is not identical
   Dies     : if $seqname doesn't exist in both sequence files
 =cut
     
 sub compare_seq_to_seq {
-  my ( $self, $sqfile2, $seqname ) = @_;
+  my ( $self, $sqfile2, $seqname1, $seqname2 ) = @_;
 
   $self->_check_sqfile();
   $self->_check_ssi();
@@ -763,7 +763,39 @@ sub compare_seq_to_seq {
   $sqfile2->_check_sqfile();
   $sqfile2->_check_ssi();
 
-  return _c_compare_seq_to_seq($self->{esl_sqfile}, $sqfile2->{esl_sqfile}, $seqname);
+  return _c_compare_seq_to_seq($self->{esl_sqfile}, $sqfile2->{esl_sqfile}, $seqname1, $seqname2);
+}
+
+=head2 compare_seq_to_subseq
+
+  Title    : compare_seq_to_subseq()
+  Incept   : EPN, Tue Sep 25 18:17:51 2018
+  Usage    : Bio::Easel::SqFile->compare_seq_to_subseq($sqfile2, $sqname1, $sqname2, $start, $end)
+  Function : Fetches a full sequence named <$sqname1> in $self, 
+           : and a subsequence from $start..$end from a sequence named 
+           : <$sqname2> in $sqfile2, and compare that the sequences are
+           : identical. 
+  Args     : $sqfile2: name of second sequence file (first is $self)
+           : $seqname1: name of sequence in $self
+           : $seqname2: name of sequence in $sqfile2
+           : $start:    start position coordinate
+           : $end:      stop position coordinate
+  Returns  : '1' if the sequence and subsequence exist and are identical
+           : '0' if the sequence and subsequence exist and are not identical
+  Dies     : if either the sequence or subsequence doesn't exist in 
+           : the proper file.
+=cut
+    
+sub compare_seq_to_subseq {
+  my ( $self, $sqfile2, $seqname1, $seqname2, $start, $end ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  $sqfile2->_check_sqfile();
+  $sqfile2->_check_ssi();
+
+  return _c_compare_seq_to_subseq($self->{esl_sqfile}, $sqfile2->{esl_sqfile}, $seqname1, $seqname2, $start, $end);
 }
 
 =head2 nseq_ssi

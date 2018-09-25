@@ -53,7 +53,7 @@ for($mode = 0; $mode <= 1; $mode++) {
   is ($seqstring, ">tRNA5-sample33/13-31\nAAGUGGCAUCGCACUUGAC\n");
 
   # test fetch_subseqs
-  my @AA = ();
+  @AA = ();
   @{$AA[0]} = ("tRNA5-sample33/13-31", 13, 31, "tRNA5-sample33");
   @{$AA[1]} = ("revcomp", 31, 13, "tRNA5-sample33");
   $seqstring = $sqfile->fetch_subseqs(\@AA, -1);
@@ -66,7 +66,7 @@ for($mode = 0; $mode <= 1; $mode++) {
 
   # fetch same subseqs to a temporary file 
   $tmpfile = "t/data/tmp.fa";
-  $seqstring = $sqfile->fetch_subseqs(\@AA, 60, $tmpfile);
+  $sqfile->fetch_subseqs(\@AA, 60, $tmpfile);
   # open it 
   $tmpsqfile = Bio::Easel::SqFile->new({
      fileLocation => $tmpfile, 
