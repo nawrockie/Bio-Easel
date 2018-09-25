@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 16;
+use Test::More tests => 18;
 
 
 BEGIN {
@@ -51,6 +51,10 @@ for($mode = 0; $mode <= 1; $mode++) {
   # test fetch_subseq_to_fasta_string with no line length
   $seqstring = $sqfile->fetch_subseq_to_fasta_string("tRNA5-sample33", 13, 31);
   is ($seqstring, ">tRNA5-sample33/13-31\nAAGUGGCAUCGCACUUGAC\n");
+
+  # test fetch_subseq_to_sqstring with no line length
+  $seqstring = $sqfile->fetch_subseq_to_sqstring("tRNA5-sample33", 13, 31);
+  is ($seqstring, "AAGUGGCAUCGCACUUGAC");
 
   # test fetch_subseqs
   @AA = ();

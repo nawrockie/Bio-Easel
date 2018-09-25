@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 46;
+use Test::More tests => 48;
 
 BEGIN {
     use_ok( 'Bio::Easel::SqFile' ) || print "Bail out!\n";
@@ -75,9 +75,13 @@ for($mode = 0; $mode <= 1; $mode++) {
   $exists = $sqfile->check_subseq_exists("tRNA5-sample33", 1, 72);
   is ($exists, "0");
 
-  # test fetch_seq_to_fasta_string with no line length
+  # test fetch_seq_to_fasta_string 
   $seqstring = $sqfile->fetch_seq_to_fasta_string("tRNA5-sample33");
   is ($seqstring, ">tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCC\nGCUUGGUGAUA\n");
+
+  # test fetch_seq_to_sqstring
+  $seqstring = $sqfile->fetch_seq_to_sqstring("tRNA5-sample33");
+  is ($seqstring, "AUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCCGCUUGGUGAUA");
 
   # test fetch_seq_to_fasta_string_given_ssi_number with no line length
   $seqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33);

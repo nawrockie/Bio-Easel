@@ -446,6 +446,35 @@ sub fetch_seq_to_fasta_string {
   return _c_fetch_seq_to_fasta_string($self->{esl_sqfile}, $seqname, $textw); 
 }
 
+=head2 fetch_seq_to_sqstring
+
+  Title    : fetch_seq_to_sqstring
+  Incept   : EPN, Tue Sep 25 19:16:01 2018
+  Usage    : Bio::Easel::SqFile->fetch_seq_to_sqstring
+  Function : Fetches a sequence named $seqname from a sequence file and returns it WITHOUT
+           : its name and description, as a string of only the sequence (no newline)
+  Args     : $seqname: name or accession of desired sequence
+  Returns  : string, the sequence in FASTA format
+  Dies     : upon error in _c_fetch_seq_to_fasta_string(), with C croak() call
+
+=cut
+
+sub fetch_seq_to_sqstring {
+  my ( $self, $seqname ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  my $sqstring = _c_fetch_seq_to_fasta_string($self->{esl_sqfile}, $seqname, -1);
+  
+  # remove the header line 
+  $sqstring =~ s/^\>\S+.*\n//;
+  # remove the new line
+  chomp $sqstring;
+
+  return $sqstring;
+}
+
 =head2 fetch_seq_to_fasta_string_given_ssi_number
 
   Title    : fetch_seq_to_fasta_string_given_ssi_number
@@ -546,7 +575,7 @@ sub fetch_subseqs {
              $textw  : width of FASTA seq lines, -1 for unlimited, if !defined $FASTATEXTW is used
              $do_res_revcomp: '1' to reverse complement sequence even if its 1 residue (set to 0 if !defined)
   Returns  : string, the subsequence in FASTA format
-  Dies     : upon error in _c_fetch_suseq_to_fasta_string(), with C croak() call
+  Dies     : upon error in _c_fetch_subseq_to_fasta_string(), with C croak() call
 
 =cut
 
@@ -561,6 +590,44 @@ sub fetch_subseq_to_fasta_string {
   
   my $newname = $seqname . "/" . $start . "-" . $end;
   return _c_fetch_subseq_to_fasta_string($self->{esl_sqfile}, $seqname, $newname, $start, $end, $textw, $do_res_revcomp); 
+}
+
+=head2 fetch_subseq_to_sqstring
+
+  Title    : fetch_subseq_to_sqstring
+  Incept   : EPN, Tue Sep 25 19:25:36 2018
+  Usage    : Bio::Easel::SqFile->fetch_subseq_to_sqstring
+  Function : Fetches a subsequence from a sequence named $seqname from a sequence file
+           : and returns it WITHOUT its name and description, as a string of only 
+           : the sequence (no newline). As a special case, if $end == 0, the 
+             sequence will be fetched all the way until the end. If $start > $end and
+             $end != 0, we will reverse complement the subsequence before passing it back.
+  Args     : $seqname: name or accession of desired sequence
+             $start  : first position of subseq
+             $end    : final position of subseq, 0 for all the way to end
+             $do_res_revcomp: '1' to reverse complement sequence even if its 1 residue (set to 0 if !defined)
+  Returns  : string, the subsequence in FASTA format
+  Dies     : upon error in _c_fetch_subseq_to_fasta_string(), with C croak() call
+
+=cut
+
+sub fetch_subseq_to_sqstring {
+  my ( $self, $seqname, $start, $end, $do_res_revcomp ) = @_;
+  
+  $self->_check_sqfile();
+  $self->_check_ssi();
+  
+  if(! defined $do_res_revcomp) { $do_res_revcomp = 0; }
+  
+  my $newname = $seqname . "/" . $start . "-" . $end;
+  my $sqstring = _c_fetch_subseq_to_fasta_string($self->{esl_sqfile}, $seqname, $newname, $start, $end, -1, $do_res_revcomp);
+
+  # remove the header line 
+  $sqstring =~ s/^\>\S+.*\n//;
+  # remove the new line
+  chomp $sqstring;
+
+  return $sqstring;
 }
 
 =head2 fetch_seq_name_and_length_given_ssi_number
