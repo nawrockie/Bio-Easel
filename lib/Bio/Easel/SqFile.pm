@@ -99,6 +99,10 @@ No functions currently exported.
   Usage    : Bio::Easel::SqFile->new
   Function : Generates a new Bio::Easel::SqFile object
   Args     : <fileLocation>: file location of sequence file, <fileLocation.ssi> is index file
+           : <forceDigital>: '1' to read the sequences in digital mode
+           : <isRna>:        '1' to force RNA alphabet
+           : <isDna>:        '1' to force DNA alphabet
+           : <isAmino>:      '1' to force protein alphabet
   Returns  : Bio::Easel::SqFile object
 
 =cut
@@ -110,8 +114,26 @@ sub new {
   
   bless( $self, $caller );
 
-  # First check that the file exists and it has a .ssi file associated with it.
-  if(-e $args->{fileLocation}){
+  # set flag to digitize, unless forceText passed in
+  if ( defined $args->{forceDigital} && $args->{forceDigital}) { 
+    $self->{digitize} = 1;
+  }
+  else { 
+    $self->{digitize} = 0;
+  }
+
+  if ( defined $args->{isRna} ) { 
+    $self->{isRna} = $args->{isRna};
+  }
+  if ( defined $args->{isDna} ) { 
+    $self->{isDna} = $args->{isDna};
+  }
+  if ( defined $args->{isAmino} ) { 
+    $self->{isAmino} = $args->{isAmino};
+  }
+
+  # check that the file exists and it has a .ssi file associated with it.
+  if(defined $args->{fileLocation} && -e $args->{fileLocation}){
     eval{
       $self->{path} = $args->{fileLocation};
       $self->open_sqfile();
@@ -186,7 +208,22 @@ sub open_sqfile {
   }
   if ( !defined $self->{path} ) { die "trying to read sequence file but path is not set"; }
 
-  $self->{esl_sqfile} = _c_open_sqfile( $self->{path} );
+  # default is to read in text mode, unless we set it to digitize to TRUE when we created the object
+  if(! defined $self->{digitize}) { 
+    $self->{digitize} = 0; 
+  }
+  # default is to guess alphabet
+  if (! defined $self->{isRna}) { 
+    $self->{isRna} = 0;
+  }
+  if (! defined $self->{isDna}) { 
+    $self->{isDna} = 0;
+  }
+  if (! defined $self->{isAmino}) { 
+    $self->{isAmino} = 0;
+  }
+
+  $self->{esl_sqfile} = _c_open_sqfile( $self->{path}, $self->{digitize}, $self->{isRna}, $self->{isDna}, $self->{isAmino} );
 
   if ( ! defined $self->{esl_sqfile} ) { die "_c_open_sqfile returned, but esl_sqfile still undefined"; }
 
@@ -687,6 +724,34 @@ sub check_subseq_exists {
     return 1; # subseq exists
   }
   return 0; # sequence $sqname exists but subseq does not
+}
+
+=head2 compare_seq_to_seq
+
+  Title    : compare_seq_to_seq()
+  Incept   : EPN, Mon Sep 24 20:59:06 2018
+  Usage    : Bio::Easel::SqFile->compare_seq_to_seq($sqfile2, $sqname)
+  Function : Looks up a sequence named <$sqname> in the SSI 
+           : index for an open sequence file and a sequence with the
+           : same name in another open sequence file <$sqfile2> and
+           : compares the two sequences for identity.
+  Args     : $sqfile2: name of second sequence file (first is $self)
+           : $seqname: name of sequence
+  Returns  : '1' if seq <$sqname> exists in both sequence files and is identical
+           : '0' if seq <$sqname> exists in both sequence files and is not identical
+  Dies     : if $seqname doesn't exist in both sequence files
+=cut
+    
+sub compare_seq_to_seq {
+  my ( $self, $sqfile2, $seqname ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  $sqfile2->_check_sqfile();
+  $sqfile2->_check_ssi();
+
+  return _c_compare_seq_to_seq($self->{esl_sqfile}, $sqfile2->{esl_sqfile}, $seqname);
 }
 
 =head2 nseq_ssi
