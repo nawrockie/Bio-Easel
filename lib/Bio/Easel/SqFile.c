@@ -115,11 +115,14 @@ int _c_open_ssi_index (ESL_SQFILE *sqfp)
 void _c_create_ssi_index (ESL_SQFILE *sqfp)
 {
   ESL_NEWSSI *ns      = NULL;
-  ESL_SQ     *sq      = esl_sq_Create();
+  ESL_SQ     *sq      = NULL; 
   int         nseq    = 0;
   char       *ssifile = NULL;
   uint16_t    fh;
   int         status;
+
+  if(sqfp->do_digital) sq = esl_sq_CreateDigital(sqfp->abc);
+  else                 sq = esl_sq_Create();
 
   esl_strdup(sqfp->filename, -1, &ssifile);
   esl_strcat(&ssifile, -1, ".ssi", 4);
@@ -173,13 +176,20 @@ void _c_create_ssi_index (ESL_SQFILE *sqfp)
  *            textw - width for each sequence of FASTA record, -1 for unlimited.
  *            key   - key used to fetch sequence by caller, useful only for informative error output
  * Returns:   A pointer to a string that is the sequence in FASTA format.
+ * Dies:      With croak, if we run out of memory or if the sequence is digitized
+ *            and we are unable to textize it.
  */
 char *_c_sq_to_seqstring (ESL_SQ *sq, int textw, char *key, int64_t *ret_n)
 {    
+  int     status = eslOK;        /* easel return status */
   char   *seqstring = NULL;      /* the sequence string */
   int64_t n   = 0;               /* position in string */
   int64_t n2  = 0;               /* position in string */
   int64_t pos = 0;               /* position in sq->seq */
+
+  if(sq->dsq) { /* sequence is digitized, textize it */
+    if((status = esl_sq_Textize(sq)) != eslOK) croak("problem converting digitized sequence to text sequence (%s)\n", key);
+  }
 
   /* '>' character */
   n = 0;
@@ -246,14 +256,16 @@ SV *_c_fetch_seq_to_fasta_string (ESL_SQFILE *sqfp, char *key, int textw)
 {
 
   int     status;                /* Easel status code */
-  ESL_SQ *sq = esl_sq_Create();  /* the sequence */
+  ESL_SQ *sq = NULL;             /* the sequence */
   char   *seqstring = NULL;      /* the sequence string */
   SV     *seqstringSV;           /* SV version of seqstring */
   int64_t n;                     /* length of seqstring */
 
+  if(sqfp->do_digital) sq = esl_sq_CreateDigital(sqfp->abc);
+  else                 sq = esl_sq_Create();
+
   /* make sure textw makes sense and we're not in digital mode */
   if(textw < 0 && textw != -1) croak("invalid value for textw\n"); 
-  if(sq->dsq)                  croak("sequence file is unexpectedly digitized\n");
 
   /* from esl-sfetch.c's onefetch() */
   if(key != NULL) { 
@@ -297,14 +309,16 @@ SV *_c_fetch_seq_to_fasta_string_given_ssi_number (ESL_SQFILE *sqfp, int nkey, i
 {
 
   int     status;                /* Easel status code */
-  ESL_SQ *sq = esl_sq_Create();  /* the sequence */
+  ESL_SQ *sq = NULL;             /* the sequence */
   char   *seqstring = NULL;      /* the sequence string */
   SV     *seqstringSV;           /* SV version of seqstring */
   int64_t n;                     /* length of seqstring */
 
+  if(sqfp->do_digital) sq = esl_sq_CreateDigital(sqfp->abc);
+  else                 sq = esl_sq_Create();
+
   /* make sure textw makes sense and we're not in digital mode */
   if(textw < 0 && textw != -1) croak("invalid value for textw\n"); 
-  if (sq->dsq)                 croak("sequence file is unexpectedly digitized\n");
 
   /* adapted from esl-sfetch.c's onefetch() for PositionByNumber instead of PositionByKey */
   if (sqfp->data.ascii.ssi == NULL) croak("sequence file has no SSI information\n"); 
@@ -376,10 +390,13 @@ SV *_c_fetch_subseq_to_fasta_string (ESL_SQFILE *sqfp, char *key, char *newname,
 {
   int     start, end;            /* start/end for esl_sqio_FetchSubseq() */
   int     do_revcomp;            /* are we revcomp'ing? */
-  ESL_SQ *sq = esl_sq_Create();  /* the sequence */
+  ESL_SQ *sq = NULL;             /* the sequence */
   char   *seqstring = NULL;      /* the sequence string */
   SV     *seqstringSV;           /* SV version of seqstring */
   int64_t n;                     /* length of seqstring */
+
+  if(sqfp->do_digital) sq = esl_sq_CreateDigital(sqfp->abc);
+  else                 sq = esl_sq_Create();
 
   /* make sure textw makes sense */
   if(textw < 0 && textw != -1) croak("invalid value for textw\n"); 
@@ -562,8 +579,14 @@ long _c_check_seq_exists(ESL_SQFILE *sqfp, char *sqname) {
 
 long _c_compare_seq_to_seq(ESL_SQFILE *sqfp1, ESL_SQFILE *sqfp2, char *sqname) { 
   int      status;   /* Easel status code */
-  ESL_SQ     *sq1 = esl_sq_Create();
-  ESL_SQ     *sq2 = esl_sq_Create();
+  ESL_SQ     *sq1 = NULL; /* sequence read from first sequence file */
+  ESL_SQ     *sq2 = NULL; /* sequence read from second sequence file */
+
+  if(sqfp1->do_digital) sq1 = esl_sq_CreateDigital(sqfp1->abc);
+  else                  sq1 = esl_sq_Create();
+
+  if(sqfp2->do_digital) sq2 = esl_sq_CreateDigital(sqfp2->abc);
+  else                  sq2 = esl_sq_Create();
 
   /* make sure SSI is valid */
   if (sqfp1->data.ascii.ssi == NULL) croak("sequence file 1 %s has no SSI information\n", sqfp1->filename); 

@@ -133,19 +133,25 @@ sub new {
   }
 
   # check that the file exists and it has a .ssi file associated with it.
-  if(defined $args->{fileLocation} && -e $args->{fileLocation}){
-    eval{
-      $self->{path} = $args->{fileLocation};
-      $self->open_sqfile();
-    }; # end of eval
-    
-    if($@) {
-      confess("Error creating ESL_SQFILE from @{[$args->{fileLocation}]}, $@\n");
+  if(defined $args->{fileLocation}) { 
+    if(-e $args->{fileLocation}){
+      eval{
+        $self->{path} = $args->{fileLocation};
+        $self->open_sqfile();
+      }; # end of eval
+      
+      if($@) {
+        confess("Error creating ESL_SQFILE from @{[$args->{fileLocation}]}, $@\n");
+      }
+    } 
+    else {
+      confess("Expected to receive a valid file location path (@{[$args->{fileLocation}]} doesn\'t exist)");
     }
-  } 
-  else {
-    confess("Expected to receive a valid file location path (@{[$args->{fileLocation}]} doesn\'t exist)");
   }
+  else { 
+    confess("Expected to receive a valid file location path, but path was undefined)");
+  }
+
   return $self;
 }
 
