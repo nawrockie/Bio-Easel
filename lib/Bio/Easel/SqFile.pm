@@ -783,8 +783,8 @@ sub check_seq_exists {
            : $start:  start position of sequence
            : $end:    end position of sequence
   Returns  : '1'  if subsequence exists in the sqfile,
-           : '0' if sequence exists but subseq coordinates are out of range
-           : '-1' if sequence does not exist at all
+           : '0' if sequence does not exist in the file 
+           :     OR if sequence exists but subseq coordinates are out of range
   Dies     : upon error in _c_fetch_seq_length_given_name() with C croak() call
 =cut
     
@@ -797,7 +797,7 @@ sub check_subseq_exists {
   # fetch length to see if (a) seq exists and (b) coords are valid
   my $L = _c_fetch_seq_length_given_name($self->{esl_sqfile}, $sqname);
   if($L == -1) { 
-    return -1; # sequence $sqname does not exist
+    return 0; # sequence $sqname does not exist
   }
   if($start >= 1 && $start <= $L && $end >= 1 && $end <= $L) { 
     return 1; # subseq exists

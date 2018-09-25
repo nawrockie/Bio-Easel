@@ -64,7 +64,7 @@ for($mode = 0; $mode <= 1; $mode++) {
   is ($exists, "1");
 
   $exists = $sqfile->check_subseq_exists("tRNA6-sample33", 1, 10);
-  is ($exists, "-1");
+  is ($exists, "0");
 
   $exists = $sqfile->check_subseq_exists("tRNA5-sample33", 0, 10);
   is ($exists, "0");
