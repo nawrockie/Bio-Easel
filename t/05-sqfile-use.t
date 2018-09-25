@@ -23,6 +23,7 @@ my $tmpsqfile;
 # first test new without a forceDigital value
 $sqfile = Bio::Easel::SqFile->new({
    fileLocation => $infile, 
+   forceIndex   => 1, 
 });
 isa_ok($sqfile, "Bio::Easel::SqFile");
 undef $sqfile;
@@ -30,10 +31,10 @@ undef $sqfile;
 # now do all tests with in both text (mode == 0) and digital (mode == 1) modes
 for($mode = 0; $mode <= 1; $mode++) { 
   undef $sqfile;
-
   $sqfile = Bio::Easel::SqFile->new({
       fileLocation => $infile, 
       forceDigital => $mode,
+      forceIndex   => 1, 
   });
   isa_ok($sqfile, "Bio::Easel::SqFile");
 
@@ -105,6 +106,7 @@ for($mode = 0; $mode <= 1; $mode++) {
   my $tmpsqfile = Bio::Easel::SqFile->new({
      fileLocation => $tmpfile, 
      forceDigital => $mode,
+     forceIndex   => 1, 
      });
   isa_ok($tmpsqfile, "Bio::Easel::SqFile");
 

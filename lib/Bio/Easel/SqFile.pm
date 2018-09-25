@@ -100,6 +100,7 @@ No functions currently exported.
   Function : Generates a new Bio::Easel::SqFile object
   Args     : <fileLocation>: file location of sequence file, <fileLocation.ssi> is index file
            : <forceDigital>: '1' to read the sequences in digital mode
+           : <forceIndex>:   '1' to index the file, even if .ssi file already exists
            : <isRna>:        '1' to force RNA alphabet
            : <isDna>:        '1' to force DNA alphabet
            : <isAmino>:      '1' to force protein alphabet
@@ -114,7 +115,7 @@ sub new {
   
   bless( $self, $caller );
 
-  # set flag to digitize, unless forceText passed in
+  # set flag to digitize if forceDigitize passed in
   if ( defined $args->{forceDigital} && $args->{forceDigital}) { 
     $self->{digitize} = 1;
   }
@@ -150,6 +151,11 @@ sub new {
   }
   else { 
     confess("Expected to receive a valid file location path, but path was undefined)");
+  }
+
+  # index the file, if forceIndex set
+  if ( defined $args->{forceIndex} && $args->{forceIndex}) { 
+    $self->create_ssi_index();
   }
 
   return $self;

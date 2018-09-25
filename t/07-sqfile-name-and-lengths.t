@@ -23,6 +23,7 @@ my $mode;
 # first test new without a forceDigital value
 $sqfile = Bio::Easel::SqFile->new({
    fileLocation => $infile, 
+   forceIndex   => 1, 
 });
 isa_ok($sqfile, "Bio::Easel::SqFile");
 undef $sqfile;
@@ -36,6 +37,7 @@ for($mode = 0; $mode <= 1; $mode++) {
   $sqfile = Bio::Easel::SqFile->new({
        fileLocation => $infile, 
        forceDigital => $mode,
+       forceIndex   => 1, 
  });
   isa_ok($sqfile, "Bio::Easel::SqFile");
 
