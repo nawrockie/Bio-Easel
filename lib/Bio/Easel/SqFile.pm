@@ -15,7 +15,7 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.08';
+our $VERSION = '0.01';
 # Easel status codes, these must be consistent with #define's in Bio-Easel/src/easel/easel.h
 our $ESLOK =              '0';    # no error/success            
 our $ESLFAIL =            '1';    # failure                     
