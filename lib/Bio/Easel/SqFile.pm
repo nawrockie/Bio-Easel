@@ -15,7 +15,7 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.08';
 # Easel status codes, these must be consistent with #define's in Bio-Easel/src/easel/easel.h
 our $ESLOK =              '0';    # no error/success            
 our $ESLFAIL =            '1';    # failure                     
@@ -99,6 +99,11 @@ No functions currently exported.
   Usage    : Bio::Easel::SqFile->new
   Function : Generates a new Bio::Easel::SqFile object
   Args     : <fileLocation>: file location of sequence file, <fileLocation.ssi> is index file
+           : <forceDigital>: '1' to read the sequences in digital mode
+           : <forceIndex>:   '1' to index the file, even if .ssi file already exists
+           : <isRna>:        '1' to force RNA alphabet
+           : <isDna>:        '1' to force DNA alphabet
+           : <isAmino>:      '1' to force protein alphabet
   Returns  : Bio::Easel::SqFile object
 
 =cut
@@ -110,20 +115,49 @@ sub new {
   
   bless( $self, $caller );
 
-  # First check that the file exists and it has a .ssi file associated with it.
-  if(-e $args->{fileLocation}){
-    eval{
-      $self->{path} = $args->{fileLocation};
-      $self->open_sqfile();
-    }; # end of eval
-    
-    if($@) {
-      confess("Error creating ESL_SQFILE from @{[$args->{fileLocation}]}, $@\n");
-    }
-  } 
-  else {
-    confess("Expected to receive a valid file location path (@{[$args->{fileLocation}]} doesn\'t exist)");
+  # set flag to digitize if forceDigitize passed in
+  if ( defined $args->{forceDigital} && $args->{forceDigital}) { 
+    $self->{digitize} = 1;
   }
+  else { 
+    $self->{digitize} = 0;
+  }
+
+  if ( defined $args->{isRna} ) { 
+    $self->{isRna} = $args->{isRna};
+  }
+  if ( defined $args->{isDna} ) { 
+    $self->{isDna} = $args->{isDna};
+  }
+  if ( defined $args->{isAmino} ) { 
+    $self->{isAmino} = $args->{isAmino};
+  }
+
+  # check that the file exists and it has a .ssi file associated with it.
+  if(defined $args->{fileLocation}) { 
+    if(-e $args->{fileLocation}){
+      eval{
+        $self->{path} = $args->{fileLocation};
+        $self->open_sqfile();
+      }; # end of eval
+      
+      if($@) {
+        confess("Error creating ESL_SQFILE from @{[$args->{fileLocation}]}, $@\n");
+      }
+    } 
+    else {
+      confess("Expected to receive a valid file location path (@{[$args->{fileLocation}]} doesn\'t exist)");
+    }
+  }
+  else { 
+    confess("Expected to receive a valid file location path, but path was undefined)");
+  }
+
+  # index the file, if forceIndex set
+  if ( defined $args->{forceIndex} && $args->{forceIndex}) { 
+    $self->create_ssi_index();
+  }
+
   return $self;
 }
 
@@ -186,7 +220,22 @@ sub open_sqfile {
   }
   if ( !defined $self->{path} ) { die "trying to read sequence file but path is not set"; }
 
-  $self->{esl_sqfile} = _c_open_sqfile( $self->{path} );
+  # default is to read in text mode, unless we set it to digitize to TRUE when we created the object
+  if(! defined $self->{digitize}) { 
+    $self->{digitize} = 0; 
+  }
+  # default is to guess alphabet
+  if (! defined $self->{isRna}) { 
+    $self->{isRna} = 0;
+  }
+  if (! defined $self->{isDna}) { 
+    $self->{isDna} = 0;
+  }
+  if (! defined $self->{isAmino}) { 
+    $self->{isAmino} = 0;
+  }
+
+  $self->{esl_sqfile} = _c_open_sqfile( $self->{path}, $self->{digitize}, $self->{isRna}, $self->{isDna}, $self->{isAmino} );
 
   if ( ! defined $self->{esl_sqfile} ) { die "_c_open_sqfile returned, but esl_sqfile still undefined"; }
 
@@ -397,6 +446,35 @@ sub fetch_seq_to_fasta_string {
   return _c_fetch_seq_to_fasta_string($self->{esl_sqfile}, $seqname, $textw); 
 }
 
+=head2 fetch_seq_to_sqstring
+
+  Title    : fetch_seq_to_sqstring
+  Incept   : EPN, Tue Sep 25 19:16:01 2018
+  Usage    : Bio::Easel::SqFile->fetch_seq_to_sqstring
+  Function : Fetches a sequence named $seqname from a sequence file and returns it WITHOUT
+           : its name and description, as a string of only the sequence (no newline)
+  Args     : $seqname: name or accession of desired sequence
+  Returns  : string, the sequence in FASTA format
+  Dies     : upon error in _c_fetch_seq_to_fasta_string(), with C croak() call
+
+=cut
+
+sub fetch_seq_to_sqstring {
+  my ( $self, $seqname ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  my $sqstring = _c_fetch_seq_to_fasta_string($self->{esl_sqfile}, $seqname, -1);
+  
+  # remove the header line 
+  $sqstring =~ s/^\>\S+.*\n//;
+  # remove the new line
+  chomp $sqstring;
+
+  return $sqstring;
+}
+
 =head2 fetch_seq_to_fasta_string_given_ssi_number
 
   Title    : fetch_seq_to_fasta_string_given_ssi_number
@@ -497,7 +575,7 @@ sub fetch_subseqs {
              $textw  : width of FASTA seq lines, -1 for unlimited, if !defined $FASTATEXTW is used
              $do_res_revcomp: '1' to reverse complement sequence even if its 1 residue (set to 0 if !defined)
   Returns  : string, the subsequence in FASTA format
-  Dies     : upon error in _c_fetch_suseq_to_fasta_string(), with C croak() call
+  Dies     : upon error in _c_fetch_subseq_to_fasta_string(), with C croak() call
 
 =cut
 
@@ -512,6 +590,44 @@ sub fetch_subseq_to_fasta_string {
   
   my $newname = $seqname . "/" . $start . "-" . $end;
   return _c_fetch_subseq_to_fasta_string($self->{esl_sqfile}, $seqname, $newname, $start, $end, $textw, $do_res_revcomp); 
+}
+
+=head2 fetch_subseq_to_sqstring
+
+  Title    : fetch_subseq_to_sqstring
+  Incept   : EPN, Tue Sep 25 19:25:36 2018
+  Usage    : Bio::Easel::SqFile->fetch_subseq_to_sqstring
+  Function : Fetches a subsequence from a sequence named $seqname from a sequence file
+           : and returns it WITHOUT its name and description, as a string of only 
+           : the sequence (no newline). As a special case, if $end == 0, the 
+             sequence will be fetched all the way until the end. If $start > $end and
+             $end != 0, we will reverse complement the subsequence before passing it back.
+  Args     : $seqname: name or accession of desired sequence
+             $start  : first position of subseq
+             $end    : final position of subseq, 0 for all the way to end
+             $do_res_revcomp: '1' to reverse complement sequence even if its 1 residue (set to 0 if !defined)
+  Returns  : string, the subsequence in FASTA format
+  Dies     : upon error in _c_fetch_subseq_to_fasta_string(), with C croak() call
+
+=cut
+
+sub fetch_subseq_to_sqstring {
+  my ( $self, $seqname, $start, $end, $do_res_revcomp ) = @_;
+  
+  $self->_check_sqfile();
+  $self->_check_ssi();
+  
+  if(! defined $do_res_revcomp) { $do_res_revcomp = 0; }
+  
+  my $newname = $seqname . "/" . $start . "-" . $end;
+  my $sqstring = _c_fetch_subseq_to_fasta_string($self->{esl_sqfile}, $seqname, $newname, $start, $end, -1, $do_res_revcomp);
+
+  # remove the header line 
+  $sqstring =~ s/^\>\S+.*\n//;
+  # remove the new line
+  chomp $sqstring;
+
+  return $sqstring;
 }
 
 =head2 fetch_seq_name_and_length_given_ssi_number
@@ -628,6 +744,125 @@ sub fetch_seq_length_given_name {
   $self->_check_ssi();
 
   return _c_fetch_seq_length_given_name($self->{esl_sqfile}, $sqname);
+}
+
+=head2 check_seq_exists
+
+  Title    : check_seq_exists()
+  Incept   : EPN, Wed Sep 19 11:32:08 2018
+  Usage    : Bio::Easel::SqFile->check_seq_exists($sqname)
+  Function : Looks up a sequence named <$sqname> in the SSI 
+           : index for an open sequence file. Returns '1' if it exists
+           : and '0' if it does not. 
+  Args     : $sqname: name of sequence
+  Returns  : '1' if sequence exists in the sqfile, '0' if it does not
+  Dies     : upon error in _c_check_seq_exists() with C croak() call
+
+=cut
+    
+sub check_seq_exists {
+  my ( $self, $sqname ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  return _c_check_seq_exists($self->{esl_sqfile}, $sqname);
+}
+
+=head2 check_subseq_exists
+
+  Title    : check_subseq_exists()
+  Incept   : EPN, Wed Sep 19 11:32:08 2018
+  Usage    : Bio::Easel::SqFile->check_subseq_exists($sqname, $start, $end)
+  Function : Looks up a sequence named <$sqname> in the SSI 
+           : index for an open sequence file. Returns '1' if it exists
+           : and $start and $end are both in range 1..L (subseq exists)
+           : '-0' if sequence exists but either $start and/or $end are 
+           : not in range 1..L, and '-1' if sequence does not exist.
+  Args     : $sqname: name of sequence
+           : $start:  start position of sequence
+           : $end:    end position of sequence
+  Returns  : '1'  if subsequence exists in the sqfile,
+           : '0' if sequence does not exist in the file 
+           :     OR if sequence exists but subseq coordinates are out of range
+  Dies     : upon error in _c_fetch_seq_length_given_name() with C croak() call
+=cut
+    
+sub check_subseq_exists {
+  my ( $self, $sqname, $start, $end ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  # fetch length to see if (a) seq exists and (b) coords are valid
+  my $L = _c_fetch_seq_length_given_name($self->{esl_sqfile}, $sqname);
+  if($L == -1) { 
+    return 0; # sequence $sqname does not exist
+  }
+  if($start >= 1 && $start <= $L && $end >= 1 && $end <= $L) { 
+    return 1; # subseq exists
+  }
+  return 0; # sequence $sqname exists but subseq does not
+}
+
+=head2 compare_seq_to_seq
+
+  Title    : compare_seq_to_seq()
+  Incept   : EPN, Mon Sep 24 20:59:06 2018
+  Usage    : Bio::Easel::SqFile->compare_seq_to_seq($sqfile2, $sqname)
+  Function : Fetches a full sequence named <$sqname1> in $self, 
+           : and a full sequence named  <$sqname2> in $sqfile2, 
+           : and compare that the sequences are identical. 
+  Args     : $sqfile2:  name of second sequence file (first is $self)
+           : $seqname1: name of sequence in sequence file 1
+           : $seqname2: name of sequence in sequence file 2
+  Returns  : '1' if seqs exist in respective sequence files and is identical
+           : '0' if seqs exist in respective sequence files and is not identical
+  Dies     : if $seqname doesn't exist in both sequence files
+=cut
+    
+sub compare_seq_to_seq {
+  my ( $self, $sqfile2, $seqname1, $seqname2 ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  $sqfile2->_check_sqfile();
+  $sqfile2->_check_ssi();
+
+  return _c_compare_seq_to_seq($self->{esl_sqfile}, $sqfile2->{esl_sqfile}, $seqname1, $seqname2);
+}
+
+=head2 compare_seq_to_subseq
+
+  Title    : compare_seq_to_subseq()
+  Incept   : EPN, Tue Sep 25 18:17:51 2018
+  Usage    : Bio::Easel::SqFile->compare_seq_to_subseq($sqfile2, $sqname1, $sqname2, $start, $end)
+  Function : Fetches a full sequence named <$sqname1> in $self, 
+           : and a subsequence from $start..$end from a sequence named 
+           : <$sqname2> in $sqfile2, and compare that the sequences are
+           : identical. 
+  Args     : $sqfile2: name of second sequence file (first is $self)
+           : $seqname1: name of sequence in $self
+           : $seqname2: name of sequence in $sqfile2
+           : $start:    start position coordinate
+           : $end:      stop position coordinate
+  Returns  : '1' if the sequence and subsequence exist and are identical
+           : '0' if the sequence and subsequence exist and are not identical
+  Dies     : if either the sequence or subsequence doesn't exist in 
+           : the proper file.
+=cut
+    
+sub compare_seq_to_subseq {
+  my ( $self, $sqfile2, $seqname1, $seqname2, $start, $end ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  $sqfile2->_check_sqfile();
+  $sqfile2->_check_ssi();
+
+  return _c_compare_seq_to_subseq($self->{esl_sqfile}, $sqfile2->{esl_sqfile}, $seqname1, $seqname2, $start, $end);
 }
 
 =head2 nseq_ssi

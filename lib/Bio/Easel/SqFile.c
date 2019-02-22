@@ -1,4 +1,5 @@
 #include "easel.h"
+#include "esl_alphabet.h"
 #include "esl_sqio.h"
 #include "esl_sq.h"
 #include "esl_ssi.h"
@@ -19,17 +20,26 @@
                         : NULL                                          \
                                                    )
 
-
 /* Function:  _c_open_sqfile()
  * Incept:    EPN, Mon Mar  4 13:27:43 2013
  * Synopsis:  Open a sequence file and point a pointer at it.
+ * Args:      seqfile:    name of sequence file
+ *            do_digital: '1' to read n digital mode, '0' to read in text mode
+ *                        digital mode is faster, safer, text preserves case, exact characters
+ *            is_rna:     '1' to force RNA alphabet
+ *            is_dna:     '1' to force DNA alphabet
+ *            is_amino:   '1' to force amino alphabet
+ *           
  * Returns:   eslOK on success, dies with 'croak' upon an error.
  */
 
-SV *_c_open_sqfile (char *seqfile)
+SV *_c_open_sqfile (char *seqfile, int do_digital, int is_rna, int is_dna, int is_amino)
 {
   int           status;      /* Easel status code */
   ESL_SQFILE   *sqfp = NULL; /* open input alignment file */
+  /* used only if do_digital is TRUE */
+  ESL_ALPHABET *abc       = NULL;
+  int           alphatype = eslUNKNOWN;
 
   /* open input file */
   status = esl_sqfile_Open(seqfile, eslSQFILE_UNKNOWN, NULL, &sqfp);
@@ -37,6 +47,22 @@ SV *_c_open_sqfile (char *seqfile)
   else if (status == eslEFORMAT)   croak("Format of file %s unrecognized.\n", seqfile);
   else if (status == eslEINVAL)    croak("Can't autodetect stdin or .gz for sequence file %s\n", seqfile);
   else if (status != eslOK)        croak("Open of sequence file %s failed, code %d.\n", seqfile, status);
+
+  if(do_digital) { 
+    if     (is_rna)   alphatype = eslRNA;
+    else if(is_dna)   alphatype = eslDNA;
+    else if(is_amino) alphatype = eslAMINO;
+    else { 
+      status = esl_sqfile_GuessAlphabet(sqfp, &alphatype);
+      if      (status == eslENOALPHABET) croak("Couldn't guess alphabet from first sequence in %s", seqfile);
+      else if (status == eslEFORMAT)     croak("Parse failed (sequence file %s):\n%s\n",
+                                               sqfp->filename, esl_sqfile_GetErrorBuf(sqfp));     
+      else if (status == eslENODATA)    croak("Sequence file %s contains no data?", seqfile);
+      else if (status != eslOK)         croak("Failed to guess alphabet (error code %d)\n", status);
+    }
+    abc = esl_alphabet_Create(alphatype);
+    esl_sqfile_SetDigital(sqfp, abc);
+  }
 
   return perl_obj(sqfp, "ESL_SQFILE");
 }    
@@ -89,11 +115,14 @@ int _c_open_ssi_index (ESL_SQFILE *sqfp)
 void _c_create_ssi_index (ESL_SQFILE *sqfp)
 {
   ESL_NEWSSI *ns      = NULL;
-  ESL_SQ     *sq      = esl_sq_Create();
+  ESL_SQ     *sq      = NULL; 
   int         nseq    = 0;
   char       *ssifile = NULL;
   uint16_t    fh;
   int         status;
+
+  if(sqfp->do_digital) sq = esl_sq_CreateDigital(sqfp->abc);
+  else                 sq = esl_sq_Create();
 
   esl_strdup(sqfp->filename, -1, &ssifile);
   esl_strcat(&ssifile, -1, ".ssi", 4);
@@ -140,6 +169,120 @@ void _c_create_ssi_index (ESL_SQFILE *sqfp)
   esl_newssi_Close(ns);
 }    
 
+/* Function:  _c_fetch_one_sequence()
+ * Incept:    EPN, Tue Sep 25 17:29:17 2018
+ * Purpose:   Fetch a single sequence named <sqname> from 
+ *            <sqfp> into <sq>.
+ *            As a special case, if <sqname> is NULL, 
+ *            we fetch the next sequence in the file.
+ *
+ * Args:      sqfp   - open ESL_SQFILE to fetch seq from
+ *            sqname - name of sequence to fetch
+ *            ret_sq - ESL_SQ object to fetch sequence into, created here
+ *
+ * Returns:   void
+ *
+ * Dies:      with croak if 
+ *            - sequence <sqname> does not exist in <sqfp>
+ *            - problem parsing SSI index for <sqfp>
+ *            - unable to fetch sequence for some reason
+ *            - we fetch the wrong sequence for some reason
+ */
+void _c_fetch_one_sequence(ESL_SQFILE *sqfp, char *sqname, ESL_SQ **ret_sq) { 
+  int      status;    /* Easel status code */
+  ESL_SQ  *sq = NULL; /* the sequence */
+
+  /* make sure SSI is valid if we're going to use it */
+  if ((sqname != NULL) && (sqfp->data.ascii.ssi == NULL)) croak("sequence file has no SSI information\n", sqfp->filename); 
+
+  if(sqfp->do_digital) sq = esl_sq_CreateDigital(sqfp->abc);
+  else                 sq = esl_sq_Create();
+
+  /* from esl-sfetch.c's onefetch() */
+  if(sqname != NULL) { 
+    status = esl_sqfile_PositionByKey(sqfp, sqname);
+    if      (status == eslENOTFOUND) croak("seq %s not found in SSI index for file %s\n", sqname, sqfp->filename); 
+    else if (status == eslEFORMAT)   croak("Failed to parse SSI index for %s\n", sqfp->filename);
+    else if (status != eslOK)        croak("Failed to look up location of seq %s in SSI index of file %s\n", sqname, sqfp->filename);
+  }
+  /* if sqname is NULL, we just read the next sequence */
+
+  status = esl_sqio_Read(sqfp, sq);
+  if      (status == eslEFORMAT) croak("Parse failed (sequence file %s):\n%s\n",  sqfp->filename, esl_sqfile_GetErrorBuf(sqfp));
+  else if (status == eslEOF)     croak("Unexpected EOF reading sequence file %s\n", sqfp->filename);
+  else if (status != eslOK)      croak("Unexpected error %d reading sequence file %s\n", status, sqfp->filename);
+
+  if (sqname != NULL && strcmp(sqname, sq->name) != 0 && strcmp(sqname, sq->acc) != 0) 
+    croak("whoa, internal error; found the wrong sequence %s, not %s\n", sq->name, sqname);
+
+  *ret_sq = sq;
+
+  return;
+}
+
+/* Function:  _c_fetch_one_subsequence()
+ * Incept:    EPN, Tue Sep 25 18:30:28 2018
+ * Purpose:   Fetch a single subsequence from <start>..<end>
+ *            for a sequence named <sqname> from 
+ *            <sqfp> into <sq>.
+ *            As a special case, if <sqname> is NULL, 
+ *            we fetch the next sequence in the file.
+ *
+ * Args:      sqfp   - open ESL_SQFILE to fetch seq from
+ *            sqname - name of sequence to fetch
+ *            newname      - name to assign to the sequence, if null <sqname><given_start>-<given_end> will be used
+ *            given_start - start position passed in (may be > given_end, if we want the revcomp)
+ *            given_end   - end position passed in (may be < given_start, if we want the revcomp)
+ *            do_res_revcomp - TRUE to force revcomp of a length 1 sequence, since
+ *                             it's impossible to tell from given_start/given_end
+ *                             if a 1 residue sequence should be revcomp'ed.
+ *            ret_sq - ESL_SQ object to fetch sequence into, created here
+ *
+ * Returns:   void
+ *
+ * Dies:      with croak if 
+ *            - sequence <sqname> does not exist in <sqfp>
+ *            - problem parsing SSI index for <sqfp>
+ *            - unable to fetch subsequence for some reason
+ */
+void _c_fetch_one_subsequence(ESL_SQFILE *sqfp, char *sqname, char *newname, long given_start, long given_end, int do_res_revcomp, ESL_SQ **ret_sq) { 
+  ESL_SQ  *sq = NULL; /* the sequence */
+  int     start, end;            /* start/end for esl_sqio_FetchSubseq() */
+  int     do_revcomp;            /* are we revcomp'ing? */
+
+  /* make sure SSI is valid if we're going to use it */
+  if (sqfp->data.ascii.ssi == NULL) croak("sequence file has no SSI information\n"); 
+
+  if(sqfp->do_digital) sq = esl_sq_CreateDigital(sqfp->abc);
+  else                 sq = esl_sq_Create();
+
+  /* reverse complement indicated by coords. */
+  if (given_end != 0 && given_start > given_end) { 
+    start = given_end; end   = given_start; do_revcomp = TRUE; 
+  }
+  else if (given_end == given_start && do_res_revcomp) { 
+    /* odd case: single residue, can't tell from given_start/given_end if we should revcomp */
+    start = given_end; end = given_start;   do_revcomp = TRUE;  
+  }
+  else { 
+    start = given_start; end = given_end;   do_revcomp = FALSE; 
+  }
+
+  /* fetch the subsequence, croak upon an error */
+  if (esl_sqio_FetchSubseq(sqfp, sqname, start, end, sq) != eslOK) croak(esl_sqfile_GetErrorBuf(sqfp));
+
+  if      (newname != NULL) esl_sq_SetName(sq, newname);
+  else                      esl_sq_FormatName(sq, "%s/%d-%d", sqname, given_start, (given_end == 0) ? sq->L : given_end);
+
+  /* possibly reverse complement the subseq we just fetched */
+  if (do_revcomp) { 
+    if (esl_sq_ReverseComplement(sq) != eslOK) croak("Failed to reverse complement %s; is it a protein?\n", sq->name);
+  }
+
+  *ret_sq = sq;
+
+  return;
+}
 
 /* Function:  _c_sq_to_seqstring()
  * Incept:    EPN, Mon Mar 25 15:35:13 2013
@@ -148,13 +291,20 @@ void _c_create_ssi_index (ESL_SQFILE *sqfp)
  *            textw - width for each sequence of FASTA record, -1 for unlimited.
  *            key   - key used to fetch sequence by caller, useful only for informative error output
  * Returns:   A pointer to a string that is the sequence in FASTA format.
+ * Dies:      With croak, if we run out of memory or if the sequence is digitized
+ *            and we are unable to textize it.
  */
 char *_c_sq_to_seqstring (ESL_SQ *sq, int textw, char *key, int64_t *ret_n)
 {    
+  int     status = eslOK;        /* easel return status */
   char   *seqstring = NULL;      /* the sequence string */
   int64_t n   = 0;               /* position in string */
   int64_t n2  = 0;               /* position in string */
   int64_t pos = 0;               /* position in sq->seq */
+
+  if(sq->dsq) { /* sequence is digitized, textize it */
+    if((status = esl_sq_Textize(sq)) != eslOK) croak("problem converting digitized sequence to text sequence (%s)\n", key);
+  }
 
   /* '>' character */
   n = 0;
@@ -219,33 +369,16 @@ char *_c_sq_to_seqstring (ESL_SQ *sq, int textw, char *key, int64_t *ret_n)
  */
 SV *_c_fetch_seq_to_fasta_string (ESL_SQFILE *sqfp, char *key, int textw)
 {
-
-  int     status;                /* Easel status code */
-  ESL_SQ *sq = esl_sq_Create();  /* the sequence */
+  ESL_SQ *sq = NULL;             /* the sequence */
   char   *seqstring = NULL;      /* the sequence string */
   SV     *seqstringSV;           /* SV version of seqstring */
   int64_t n;                     /* length of seqstring */
 
   /* make sure textw makes sense and we're not in digital mode */
   if(textw < 0 && textw != -1) croak("invalid value for textw\n"); 
-  if (sq->dsq)                 croak("sequence file is unexpectedly digitized\n");
 
-  /* from esl-sfetch.c's onefetch() */
-  if(key != NULL) { 
-    if (sqfp->data.ascii.ssi == NULL) croak("sequence file has no SSI information\n"); 
-    status = esl_sqfile_PositionByKey(sqfp, key);
-    if      (status == eslENOTFOUND) croak("seq %s not found in SSI index for file %s\n", key, sqfp->filename); 
-    else if (status == eslEFORMAT)   croak("Failed to parse SSI index for %s\n", sqfp->filename);
-    else if (status != eslOK)        croak("Failed to look up location of seq %s in SSI index of file %s\n", key, sqfp->filename);
-  }
-
-  status = esl_sqio_Read(sqfp, sq);
-  if      (status == eslEFORMAT) croak("Parse failed (sequence file %s):\n%s\n",  sqfp->filename, esl_sqfile_GetErrorBuf(sqfp));
-  else if (status == eslEOF)     croak("Unexpected EOF reading sequence file %s\n", sqfp->filename);
-  else if (status != eslOK)      croak("Unexpected error %d reading sequence file %s\n", status, sqfp->filename);
-
-  if (key != NULL && strcmp(key, sq->name) != 0 && strcmp(key, sq->acc) != 0) 
-    croak("whoa, internal error; found the wrong sequence %s, not %s\n", sq->name, key);
+  /* fetch the sequence, this will die with croak if there's a problem */
+  _c_fetch_one_sequence(sqfp, key, &sq);
 
   seqstring = _c_sq_to_seqstring(sq, textw, key, &n);
   esl_sq_Destroy(sq);
@@ -272,14 +405,16 @@ SV *_c_fetch_seq_to_fasta_string_given_ssi_number (ESL_SQFILE *sqfp, int nkey, i
 {
 
   int     status;                /* Easel status code */
-  ESL_SQ *sq = esl_sq_Create();  /* the sequence */
+  ESL_SQ *sq = NULL;             /* the sequence */
   char   *seqstring = NULL;      /* the sequence string */
   SV     *seqstringSV;           /* SV version of seqstring */
   int64_t n;                     /* length of seqstring */
 
+  if(sqfp->do_digital) sq = esl_sq_CreateDigital(sqfp->abc);
+  else                 sq = esl_sq_Create();
+
   /* make sure textw makes sense and we're not in digital mode */
   if(textw < 0 && textw != -1) croak("invalid value for textw\n"); 
-  if (sq->dsq)                 croak("sequence file is unexpectedly digitized\n");
 
   /* adapted from esl-sfetch.c's onefetch() for PositionByNumber instead of PositionByKey */
   if (sqfp->data.ascii.ssi == NULL) croak("sequence file has no SSI information\n"); 
@@ -347,39 +482,19 @@ SV *_c_fetch_next_seq_to_fasta_string (ESL_SQFILE *sqfp, int textw)
  * Returns:   A pointer to a string that is the subsequence in FASTA format.
  */
 
-SV *_c_fetch_subseq_to_fasta_string (ESL_SQFILE *sqfp, char *key, char *newname, int given_start, int given_end, int textw, int do_res_revcomp)
+SV *_c_fetch_subseq_to_fasta_string (ESL_SQFILE *sqfp, char *key, char *newname, long given_start, long given_end, int textw, int do_res_revcomp)
 {
-  int     start, end;            /* start/end for esl_sqio_FetchSubseq() */
-  int     do_revcomp;            /* are we revcomp'ing? */
-  ESL_SQ *sq = esl_sq_Create();  /* the sequence */
+  ESL_SQ *sq = NULL;             /* the sequence */
   char   *seqstring = NULL;      /* the sequence string */
   SV     *seqstringSV;           /* SV version of seqstring */
   int64_t n;                     /* length of seqstring */
 
   /* make sure textw makes sense */
   if(textw < 0 && textw != -1) croak("invalid value for textw\n"); 
-  /* make sure we're not in digital mode, and SSI is valid */
-  if (sq->dsq)                      croak("sequence file is unexpectedly digitized\n");
+  /* make sure SSI is valid */
   if (sqfp->data.ascii.ssi == NULL) croak("sequence file has no SSI information\n"); 
 
-  /* reverse complement indicated by coords. */
-  if (given_end != 0 && given_start > given_end)  
-  { start = given_end;   end = given_start; do_revcomp = TRUE; }
-  else if (given_end == given_start && do_res_revcomp) /* odd case: single residue, can't tell from given_start/given_end if we should revcomp */
-  { start = given_end;   end = given_start; do_revcomp = TRUE;  }
-  else 
-  { start = given_start; end = given_end;   do_revcomp = FALSE; }
-
-  /* fetch the subsequence, croak upon an error */
-  if (esl_sqio_FetchSubseq(sqfp, key, start, end, sq) != eslOK) croak(esl_sqfile_GetErrorBuf(sqfp));
-
-  if      (newname != NULL) esl_sq_SetName(sq, newname);
-  else                      esl_sq_FormatName(sq, "%s/%d-%d", key, given_start, (given_end == 0) ? sq->L : given_end);
-
-  /* possibly reverse complement the subseq we just fetched */
-  if (do_revcomp) { 
-    if (esl_sq_ReverseComplement(sq) != eslOK) croak("Failed to reverse complement %s; is it a protein?\n", sq->name);
-  }
+  _c_fetch_one_subsequence(sqfp, key, newname, given_start, given_end, do_res_revcomp, &sq);
 
   seqstring = _c_sq_to_seqstring(sq, textw, key, &n);
   esl_sq_Destroy(sq);
@@ -388,8 +503,8 @@ SV *_c_fetch_subseq_to_fasta_string (ESL_SQFILE *sqfp, char *key, char *newname,
   free(seqstring);
 
   return seqstringSV;
-}
 
+}
 /* Function:  _c_fetch_seq_name_and_length_given_ssi_number()
  * Incept:    EPN, Mon Apr  8 09:34:01 2013
  * Purpose:   Fetch the primary key of a sequence and the sequence length, 
@@ -486,6 +601,147 @@ long _c_fetch_seq_length_given_name(ESL_SQFILE *sqfp, char *sqname) {
 
   return L;
 }
+
+/* Function:  _c_check_seq_exists()
+ * Incept:    EPN, Wed Sep 19 11:34:12 2018
+ * Purpose:   Check if a sequence exists given its name (primary key).
+ * Args:      sqfp   - open ESL_SQFILE to fetch seq from
+ *            sqname - name of sequence we want the length of
+ *
+ * Returns:   '1' if sequence <sqname> exists in <sqfp>,
+ *            '0' if sequence <sqname> does not exist in <sqfp>
+ * Dies:      if out of memory or somethings wrong with the SSI file
+ */
+
+int _c_check_seq_exists(ESL_SQFILE *sqfp, char *sqname) { 
+  int      status;   /* Easel status code */
+  uint16_t fh;       /* file handle sequence is in, irrelevant since we only have 1 file */
+  off_t    roff;     /* offset of start of sqname's record, irrelevant here */
+
+  /* make sure SSI is valid */
+  if (sqfp->data.ascii.ssi == NULL) croak("sequence file has no SSI information\n"); 
+
+  /* look-up sequence */
+  status = esl_ssi_FindName(sqfp->data.ascii.ssi, sqname, &fh, &roff, NULL, NULL);
+  if     (status == eslEMEM)      croak("out of memory");
+  else if(status == eslEFORMAT)   croak("error fetching sequence name %s, something wrong with SSI index?\n", sqname);
+  else if(status == eslENOTFOUND) return 0; /* seq does not exist, return '0' */
+  else if(status != eslOK)        croak("error fetching sequence name %s\n", sqname);
+
+  return 1; /* if we get here, seq exists */
+}
+
+/* Function:  _c_compare_seq_to_seq()
+ * Incept:    EPN, Tue Sep 25 10:51:38 2018
+ * Purpose:   Check if a sequence exists and is identical
+ *            (in residues only) in two sequence files.
+ * Args:      sqfp1   - first  open ESL_SQFILE to fetch seq from
+ *            sqfp2   - second open ESL_SQFILE to fetch seq from
+ *            sqname1 - name of sequence in sqfp1 we want to compare
+ *            sqname2 - name of sequence in sqfp2 we want to compare
+ *
+ * Returns:   '1' if sequence <sqname1> exists in <sqfp1> and 
+ *            <sqname2> exists in <sqfp2> and the seqs are 
+ *            identical.
+ *            '0' if sequence <sqname> exists in <sqfp1> and 
+ *            <sqname2> exists in <sqfp2> and the seqs are 
+ *            not identical.
+ * Dies:      - if sequence <sqname> does not exist in either <sqfp1>
+ *              of <sqfp2>
+ *            - if we run out of memory
+ *            - if both files are not digitized or both not digitized
+ *            - something is wrong with the SSI files
+ */
+
+int _c_compare_seq_to_seq(ESL_SQFILE *sqfp1, ESL_SQFILE *sqfp2, char *sqname1, char *sqname2) { 
+  ESL_SQ     *sq1 = NULL; /* sequence read from first sequence file */
+  ESL_SQ     *sq2 = NULL; /* sequence read from second sequence file */
+
+  /* make sure SSI is valid */
+  if (sqfp1->data.ascii.ssi == NULL) croak("sequence file 1 %s has no SSI information\n", sqfp1->filename); 
+  if (sqfp2->data.ascii.ssi == NULL) croak("sequence file 2 %s has no SSI information\n", sqfp2->filename); 
+
+  /* make sure both sequence files are either both in digital mode or both in text mode */
+  if (sqfp1->do_digital && (! sqfp2->do_digital)) croak("sequence file 1 %s is digitized, but sequence file 2 is not digitized %s\n", sqfp1->filename, sqfp2->filename); 
+  if (sqfp2->do_digital && (! sqfp1->do_digital)) croak("sequence file 2 %s is digitized, but sequence file 1 is not digitized %s\n", sqfp2->filename, sqfp1->filename); 
+
+  /* if we get here, either both sequence files are digitized or both are not */
+  _c_fetch_one_sequence(sqfp1, sqname1, &sq1);
+  _c_fetch_one_sequence(sqfp2, sqname2, &sq2);
+
+  /* if the sequences are not the same length, they can't be equal, return 0 now */
+  if (sq1->n != sq2->n) return 0;
+
+  /* compare sequences, either digitized or text */
+  if(sq1->dsq && sq2->dsq) {
+    if (memcmp(sq1->dsq, sq2->dsq, sizeof(ESL_DSQ) * (sq1->n+2)) != 0) return 0; /* return 0 if they're not identical */
+  }
+  else if (sq1->seq && sq2->seq) { /* sequences are in text mode */
+    if (strcmp(sq1->seq, sq2->seq) != 0) return 0; /* return 0 if they're not identical */
+  }
+  else { 
+    croak("whoa, internal error, sequence file types matched but both seqs are not dsq and both seqs are not text\n");
+  }
+
+  return 1; /* if we get here, sequences have been compared and are identical */
+}
+
+/* Function:  _c_compare_seq_to_subseq()
+ * Incept:    EPN, Tue Sep 25 18:22:41 2018
+ * Purpose:   Check if a sequence and subsequence exist
+ *            and are identical (in residues only) in two sequence files.
+ * 
+ * Args:      sqfp1   - first  open ESL_SQFILE to fetch seq <sqname1> from
+ *            sqfp2   - second open ESL_SQFILE to fetch seq <sqname2> from
+ *            sqname1 - name of sequence we want from sqfp1
+ *            sqname2 - name of sequence we want from sqfp2
+ *            start2  - start position of subsequence 2
+ *            end2    - end position of subsequence 2
+ * 
+ * Returns:   '1' if sequence <sqname> exists in <sqfp1> and <sqfp2>
+ *            and is identical.
+ *            '0' if sequence <sqname> exists in <sqfp1> and <sqfp2>
+ *            and is not identical.
+ * Dies:      - if sequence <sqname> does not exist in either <sqfp1>
+ *              of <sqfp2>
+ *            - if we run out of memory
+ *            - if both files are not digitized or both not digitized
+ *            - something is wrong with the SSI files
+ */
+
+int _c_compare_seq_to_subseq(ESL_SQFILE *sqfp1, ESL_SQFILE *sqfp2, char *sqname1, char *sqname2, long start2, long end2) { 
+  ESL_SQ     *sq1 = NULL; /* sequence read from first sequence file */
+  ESL_SQ     *sq2 = NULL; /* sequence read from second sequence file */
+
+  /* make sure SSI is valid */
+  if (sqfp1->data.ascii.ssi == NULL) croak("sequence file 1 %s has no SSI information\n", sqfp1->filename); 
+  if (sqfp2->data.ascii.ssi == NULL) croak("sequence file 2 %s has no SSI information\n", sqfp2->filename); 
+
+  /* make sure both sequence files are either both in digital mode or both in text mode */
+  if (sqfp1->do_digital && (! sqfp2->do_digital)) croak("sequence file 1 %s is digitized, but sequence file 2 is not digitized %s\n", sqfp1->filename, sqfp2->filename); 
+  if (sqfp2->do_digital && (! sqfp1->do_digital)) croak("sequence file 2 %s is digitized, but sequence file 1 is not digitized %s\n", sqfp2->filename, sqfp1->filename); 
+
+  /* if we get here, either both sequence files are digitized or both are not */
+  _c_fetch_one_sequence(sqfp1, sqname1, &sq1);
+  _c_fetch_one_subsequence(sqfp2, sqname2, NULL, start2, end2, /*do_res_revcomp=*/0, &sq2);
+
+  /* if the sequences are not the same length, they can't be equal, return 0 now */
+  if (sq1->n != sq2->n) return 0;
+
+  /* compare sequences, either digitized or text */
+  if(sq1->dsq && sq2->dsq) {
+    if (memcmp(sq1->dsq, sq2->dsq, sizeof(ESL_DSQ) * (sq1->n+2)) != 0) return 0; /* return 0 if they're not identical */
+  }
+  else if (sq1->seq && sq2->seq) { /* sequences are in text mode */
+    if (strcmp(sq1->seq, sq2->seq) != 0) return 0; /* return 0 if they're not identical */
+  }
+  else { 
+    croak("whoa, internal error, sequence file types matched but both seqs are not dsq and both seqs are not text\n");
+  }
+
+  return 1; /* if we get here, sequences have been compared and are identical */
+}
+
 
 /* Function:  _c_nseq_ssi
  * Incept:    EPN, Mon Apr  8 13:05:39 2013
