@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 48;
+use Test::More tests => 50;
 
 BEGIN {
     use_ok( 'Bio::Easel::SqFile' ) || print "Bail out!\n";
@@ -102,6 +102,10 @@ for($mode = 0; $mode <= 1; $mode++) {
   # test fetch_consecutive_seqs
   $seqstring = $sqfile->fetch_consecutive_seqs(3, "", 60);
   is ($seqstring,">tRNA5-sample34\nGUCCACAAAGCGUAAUGGUCAGCGUAGCCAACCUCAAGUUGGCAGGUCUUUGUUCGAUUC\nACAGUGUGGAC\n>tRNA5-sample35\nUCAAGGGGCGUAACUUCGGUAGCGUACCUUUCUGGCAAGAGGGAGAUUUGGGGUUCAACU\nCCCUACUUGAU\n>tRNA5-sample36\nUUGCCGAUGCGCCAGUGGGGAGGCGGACGUUCUGUCACUACGUAGGUCCGUUGUUCAAUA\nCAGUGUCGGCAAC\n");
+
+  # test fetch_next_seq_to_sqstring
+  $seqstring = $sqfile->fetch_next_seq_to_sqstring();
+  is ($seqstring,"GCGGCGAUAGCCAAGUCCGGUAACUCCCUGUCACUGGGUAGGUCAGGGGUUCAACUCCUCUUCGCCGCA");
 
   # create seq file
   my $tmpfile = "t/data/tmp.trna-30.fa";
