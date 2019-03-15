@@ -987,6 +987,44 @@ sub get_sqstring_aligned {
 
 #-------------------------------------------------------------------------------
 
+=head2 get_sqstring_aligned_and_truncated
+
+  Title    : get_sqstring_aligned_and_truncated
+  Incept   : EPN, Fri Mar 15 14:58:04 2019
+  Usage    : $msaObject->get_sqstring_aligned_and_truncated()
+  Function : Return an aligned sequence from an MSA
+           : truncated to include only aligned positions 
+           : from $start to $stop.
+  Args     : $idx:    index of sequence you want
+           : $astart: start alignment position [1..alen]
+           : $astop:  stop alignment position  [1..alen]
+  Returns  : aligned sequence index idx from $astart..$astop
+  Dies     : if $astart and $astop don't make sense or
+           : sequence index $idx does not exist
+=cut
+
+sub get_sqstring_aligned_and_truncated {
+  my ( $self, $idx, $astart, $astop ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($idx);
+  my $alen = $self->alen;
+  if(($astart < 0) || ($astart > $alen)) { 
+    croak "ERROR: invalid alignment position astart > alen ($astart > $alen)";
+  }
+  if(($astop < 0) || ($astop > $alen)) { 
+    croak "ERROR: invalid alignment position astop > alen ($astop > $alen)";
+  }
+  if($astart > $astop) { 
+    croak "ERROR: invalid alignment range astart > astop ($astart..$astop)";
+  }
+  my $sqstring = _c_get_sqstring_aligned( $self->{esl_msa}, $idx );
+
+  return substr($sqstring, ($astart-1), ($astop-$astart+1));
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 get_ppstring_aligned
 
   Title    : get_ppstring_aligned
@@ -1026,6 +1064,38 @@ sub get_sqstring_unaligned {
   $self->_check_msa();
   $self->_check_sqidx($idx);
   return _c_get_sqstring_unaligned( $self->{esl_msa}, $idx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 get_sqstring_unaligned_and_truncated
+
+  Title    : get_sqstring_unaligned_and_truncated
+  Incept   : EPN, Fri Mar 15 14:59:44 2019
+  Usage    : $msaObject->get_sqstring_aligned_and_truncated()
+  Function : Return an unaligned sequence from an MSA
+           : truncated to include only aligned positions 
+           : from $start to $stop.
+  Args     : $idx:    index of sequence you want
+           : $astart: start alignment position [1..alen]
+           : $astop:  stop alignment position  [1..alen]
+           : $gapstr: string of characters to consider as gaps,
+           :          if undefined we use '.-~'
+  Returns  : unaligned sequence index idx from $astart..$astop
+  Dies     : if $astart and $astop don't make sense or
+           : sequence index $idx does not exist
+
+=cut
+
+sub get_sqstring_unaligned_and_truncated {
+  my ( $self, $idx, $astart, $astop, $gapstr ) = @_;
+  
+  if(! defined $gapstr) { $gapstr = ".-~"; }
+  my $sqstring = $self->get_sqstring_aligned_and_truncated($idx, $astart, $astop);
+
+  $sqstring =~ s/[\Q$gapstr\E]//g;
+
+  return $sqstring;
 }
 
 #-------------------------------------------------------------------------------
