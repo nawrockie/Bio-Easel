@@ -446,6 +446,32 @@ sub get_rf {
 
 #-------------------------------------------------------------------------------
 
+=head2 get_rflen
+
+  Title     : get_rflen
+  Incept    : EPN, Fri Mar 15 15:48:42 2019
+  Usage     : $msaObject->rflen
+  Function  : Return nongap RF length for the MSA
+  Args      : $gapstr: string of characters to consider as gaps,
+            :          if undefined we use '.-~'
+  Returns   : length of msa->rf after removing gaps, if it exists, else dies
+=cut
+    
+sub get_rflen
+{
+  my ($self, $gapstr) = @_;
+
+  $self->_check_msa();
+  if(! defined $gapstr) { $gapstr = ".-~"; }
+  
+  if(! $self->has_rf) { croak "Trying to remove RF gap columns, but no RF annotation exists in the MSA"; }
+  my $rf = $self->get_rf;
+  $rf =~ s/[\Q$gapstr\E]//g;
+  return length($rf);
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 set_rf
 
   Title    : set_rf
@@ -2282,7 +2308,7 @@ sub remove_all_gap_columns
   Usage     : $msaObject->remove_rf_gap_columns
   Function  : Remove any column from an MSA that is a gap (exists in $gapstr)
             : in the GC RF annotation of the MSA.
-  Args      : $gapstring: string of characters to consider as gaps,
+  Args      : $gapstr: string of characters to consider as gaps,
             :             if undefined we use '.-~'
   Returns   : void
   Dies      : upon an error with croak
@@ -2290,10 +2316,10 @@ sub remove_all_gap_columns
     
 sub remove_rf_gap_columns
 {
-  my ($self, $gapstring) = @_;
+  my ($self, $gapstr) = @_;
 
   $self->_check_msa();
-  if(! defined $gapstring) { $gapstring = ".-~"; }
+  if(! defined $gapstr) { $gapstr = ".-~"; }
   
   if(! $self->has_rf) { croak "Trying to remove RF gap columns, but no RF annotation exists in the MSA"; }
   my $rf = $self->get_rf;
@@ -2303,7 +2329,7 @@ sub remove_rf_gap_columns
 
   my @usemeA = ();
   for(my $apos = 0; $apos < $rflen; $apos++) { 
-    $usemeA[$apos] = ($rfA[$apos] =~ m/[\Q$gapstring\E]/) ? 0 : 1;
+    $usemeA[$apos] = ($rfA[$apos] =~ m/[\Q$gapstr\E]/) ? 0 : 1;
   }      
   
   _c_column_subset($self->{esl_msa}, \@usemeA);
@@ -2882,7 +2908,6 @@ sub aligned_to_unaligned_pos
 }
 
 #-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
 
 =head2 rfpos_to_aligned_pos
 
@@ -2892,27 +2917,27 @@ sub aligned_to_unaligned_pos
   Function  : Return the alignment position corresponding to RF position
             : (nongap in GC RF annotation) $rfpos.
             :
-  Args      : $rfpos:     RF position we are interested in
-            : $gapstring: string of characters to consider as gaps,
-            :             if undefined we use '.-~'
-  Returns   : $apos:      alignment position (1..$alen) that $rfpos corresponds
-            :             to
+  Args      : $rfpos:  RF position we are interested in
+            : $gapstr: string of characters to consider as gaps,
+            :          if undefined we use '.-~'
+  Returns   : $apos:   alignment position (1..$alen) that $rfpos corresponds
+            :          to
   Dies      : if $rfpos is < 0 or $rfpos > $rflen (number of nongap RF positions)
             : if $self->{esl_msa} does not have RF annotation
 =cut
 
 sub rfpos_to_aligned_pos
 {
-  my ($self, $rfpos, $gapstring) = @_;
+  my ($self, $rfpos, $gapstr) = @_;
 
-  if(! defined $gapstring) { $gapstring = ".-~"; }
+  if(! defined $gapstr) { $gapstr = ".-~"; }
 
   $self->_check_msa();
   if(! $self->has_rf()) { 
     croak "In rfpos_to_aligned_pos, but MSA does not have RF annotation";
   }
 
-  return _c_rfpos_to_aligned_pos($self->{esl_msa}, $rfpos, $gapstring);
+  return _c_rfpos_to_aligned_pos($self->{esl_msa}, $rfpos, $gapstr);
 }  
 
 #-------------------------------------------------------------------------------
