@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 50;
+use Test::More tests => 54;
 
 BEGIN {
     use_ok( 'Bio::Easel::SqFile' ) || print "Bail out!\n";
@@ -16,7 +16,9 @@ my ($sqfile, $sqfile2);
 my $exists;
 my $mode; 
 my $path;
-my $seqstring;
+my $sqstring;
+my $sqname;
+my $sqlen;
 my $tmpfile;
 my $tmpsqfile;
 
@@ -76,36 +78,41 @@ for($mode = 0; $mode <= 1; $mode++) {
   is ($exists, "0");
 
   # test fetch_seq_to_fasta_string 
-  $seqstring = $sqfile->fetch_seq_to_fasta_string("tRNA5-sample33");
-  is ($seqstring, ">tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCC\nGCUUGGUGAUA\n");
+  $sqstring = $sqfile->fetch_seq_to_fasta_string("tRNA5-sample33");
+  is ($sqstring, ">tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCC\nGCUUGGUGAUA\n");
 
   # test fetch_seq_to_sqstring
-  $seqstring = $sqfile->fetch_seq_to_sqstring("tRNA5-sample33");
-  is ($seqstring, "AUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCCGCUUGGUGAUA");
+  $sqstring = $sqfile->fetch_seq_to_sqstring("tRNA5-sample33");
+  is ($sqstring, "AUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCCGCUUGGUGAUA");
 
   # test fetch_seq_to_fasta_string_given_ssi_number with no line length
-  $seqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33);
-  is ($seqstring, ">tRNA5-sample39\nUCCUCCUUAACCGAAUGGUAUGGUUCCCGCCAUUCAAGCGGGCGAUCAUAUGUUCAAUCC\nAUAUAGGAGGCA\n");
+  $sqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33);
+  is ($sqstring, ">tRNA5-sample39\nUCCUCCUUAACCGAAUGGUAUGGUUCCCGCCAUUCAAGCGGGCGAUCAUAUGUUCAAUCC\nAUAUAGGAGGCA\n");
 
   # test fetch_seq_to_fasta_string_given_ssi_number with line length of 42
-  $seqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33, 42);
-  is ($seqstring, ">tRNA5-sample39\nUCCUCCUUAACCGAAUGGUAUGGUUCCCGCCAUUCAAGCGGG\nCGAUCAUAUGUUCAAUCCAUAUAGGAGGCA\n");
+  $sqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33, 42);
+  is ($sqstring, ">tRNA5-sample39\nUCCUCCUUAACCGAAUGGUAUGGUUCCCGCCAUUCAAGCGGG\nCGAUCAUAUGUUCAAUCCAUAUAGGAGGCA\n");
 
   # test fetch_seq_to_fasta_string_given_ssi_number with unlimited line length
-  $seqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33, -1);
-  is ($seqstring, ">tRNA5-sample39\nUCCUCCUUAACCGAAUGGUAUGGUUCCCGCCAUUCAAGCGGGCGAUCAUAUGUUCAAUCCAUAUAGGAGGCA\n");
+  $sqstring = $sqfile->fetch_seq_to_fasta_string_given_ssi_number(33, -1);
+  is ($sqstring, ">tRNA5-sample39\nUCCUCCUUAACCGAAUGGUAUGGUUCCCGCCAUUCAAGCGGGCGAUCAUAUGUUCAAUCCAUAUAGGAGGCA\n");
 
   # test fetch_seq_to_fasta_string with unlimited line length
-  $seqstring = $sqfile->fetch_seq_to_fasta_string("tRNA5-sample33", -1);
-  is ($seqstring, ">tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCCGCUUGGUGAUA\n");
+  $sqstring = $sqfile->fetch_seq_to_fasta_string("tRNA5-sample33", -1);
+  is ($sqstring, ">tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCCGCUUGGUGAUA\n");
 
   # test fetch_consecutive_seqs
-  $seqstring = $sqfile->fetch_consecutive_seqs(3, "", 60);
-  is ($seqstring,">tRNA5-sample34\nGUCCACAAAGCGUAAUGGUCAGCGUAGCCAACCUCAAGUUGGCAGGUCUUUGUUCGAUUC\nACAGUGUGGAC\n>tRNA5-sample35\nUCAAGGGGCGUAACUUCGGUAGCGUACCUUUCUGGCAAGAGGGAGAUUUGGGGUUCAACU\nCCCUACUUGAU\n>tRNA5-sample36\nUUGCCGAUGCGCCAGUGGGGAGGCGGACGUUCUGUCACUACGUAGGUCCGUUGUUCAAUA\nCAGUGUCGGCAAC\n");
+  $sqstring = $sqfile->fetch_consecutive_seqs(3, "", 60);
+  is ($sqstring,">tRNA5-sample34\nGUCCACAAAGCGUAAUGGUCAGCGUAGCCAACCUCAAGUUGGCAGGUCUUUGUUCGAUUC\nACAGUGUGGAC\n>tRNA5-sample35\nUCAAGGGGCGUAACUUCGGUAGCGUACCUUUCUGGCAAGAGGGAGAUUUGGGGUUCAACU\nCCCUACUUGAU\n>tRNA5-sample36\nUUGCCGAUGCGCCAGUGGGGAGGCGGACGUUCUGUCACUACGUAGGUCCGUUGUUCAAUA\nCAGUGUCGGCAAC\n");
 
   # test fetch_next_seq_to_sqstring
-  $seqstring = $sqfile->fetch_next_seq_to_sqstring();
-  is ($seqstring,"GCGGCGAUAGCCAAGUCCGGUAACUCCCUGUCACUGGGUAGGUCAGGGGUUCAACUCCUCUUCGCCGCA");
+  $sqstring = $sqfile->fetch_next_seq_to_sqstring();
+  is ($sqstring, "GCGGCGAUAGCCAAGUCCGGUAACUCCCUGUCACUGGGUAGGUCAGGGGUUCAACUCCUCUUCGCCGCA");
+
+  # test fetch_next_seq_name_length
+  ($sqname, $sqlen) = $sqfile->fetch_next_seq_name_length();
+  is ($sqname, "tRNA5-sample38");
+  is ($sqlen, 66);
 
   # create seq file
   my $tmpfile = "t/data/tmp.trna-30.fa";
@@ -119,18 +126,18 @@ for($mode = 0; $mode <= 1; $mode++) {
   isa_ok($tmpsqfile, "Bio::Easel::SqFile");
 
   # test fetch_seq_to_fasta_string with no line length
-  $seqstring = $tmpsqfile->fetch_seq_to_fasta_string("tRNA5-sample33");
-  is ($seqstring, ">tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCC\nGCUUGGUGAUA\n");
+  $sqstring = $tmpsqfile->fetch_seq_to_fasta_string("tRNA5-sample33");
+  is ($sqstring, ">tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCC\nGCUUGGUGAUA\n");
 
   # test fetch_consecutive_seqs
-  $seqstring = $tmpsqfile->fetch_consecutive_seqs(3, "", 60);
-  is ($seqstring,">tRNA5-sample34\nGUCCACAAAGCGUAAUGGUCAGCGUAGCCAACCUCAAGUUGGCAGGUCUUUGUUCGAUUC\nACAGUGUGGAC\n>tRNA5-sample35\nUCAAGGGGCGUAACUUCGGUAGCGUACCUUUCUGGCAAGAGGGAGAUUUGGGGUUCAACU\nCCCUACUUGAU\n>tRNA5-sample36\nUUGCCGAUGCGCCAGUGGGGAGGCGGACGUUCUGUCACUACGUAGGUCCGUUGUUCAAUA\nCAGUGUCGGCAAC\n");
+  $sqstring = $tmpsqfile->fetch_consecutive_seqs(3, "", 60);
+  is ($sqstring,">tRNA5-sample34\nGUCCACAAAGCGUAAUGGUCAGCGUAGCCAACCUCAAGUUGGCAGGUCUUUGUUCGAUUC\nACAGUGUGGAC\n>tRNA5-sample35\nUCAAGGGGCGUAACUUCGGUAGCGUACCUUUCUGGCAAGAGGGAGAUUUGGGGUUCAACU\nCCCUACUUGAU\n>tRNA5-sample36\nUUGCCGAUGCGCCAGUGGGGAGGCGGACGUUCUGUCACUACGUAGGUCCGUUGUUCAAUA\nCAGUGUCGGCAAC\n");
 
   # close file, and then fetch again, which should open it 
   # note we get first three seqs this time
   $tmpsqfile->close_sqfile();
-  $seqstring = $tmpsqfile->fetch_consecutive_seqs(3, "", 60);
-  is ($seqstring, ">tRNA5-sample31\nGCUGACUUAUCGGAGAAGGCCACUAGGGGAGCUUGCCAUGCUUUCUACUCGAGCGCGAUC\nCUCGAAGUCAGCG\n>tRNA5-sample32\nUCGGCCUUGGUGUAAUGGUGUAUCACGGGAGGUUGCCGUCCUCCUAGGACCGGUUGGAUC\nCCGGUAGGCUGAC\n>tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCC\nGCUUGGUGAUA\n");
+  $sqstring = $tmpsqfile->fetch_consecutive_seqs(3, "", 60);
+  is ($sqstring, ">tRNA5-sample31\nGCUGACUUAUCGGAGAAGGCCACUAGGGGAGCUUGCCAUGCUUUCUACUCGAGCGCGAUC\nCUCGAAGUCAGCG\n>tRNA5-sample32\nUCGGCCUUGGUGUAAUGGUGUAUCACGGGAGGUUGCCGUCCUCCUAGGACCGGUUGGAUC\nCCGGUAGGCUGAC\n>tRNA5-sample33\nAUAACCACAGCGAAGUGGCAUCGCACUUGACUUCCGAUCAAGAGACCGCGGUUCGAUUCC\nGCUUGGUGAUA\n");
 
   # clean up files we just created
   unlink ($tmpfile);

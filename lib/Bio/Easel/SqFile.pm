@@ -340,8 +340,8 @@ sub create_ssi_index {
   Args     : $seqnameAR: ref to array of seqnames to fetch
            : $textw:     width of FASTA seq lines, usually $FASTATEXTW, -1 for unlimited
            : $outfile:   OPTIONAL; name of output FASTA file to create
-  Returns  : if $outfile is defined: string of all concatenated seqs
-             else                  : "" (empty string)
+  Returns  : if $outfile is defined: "" (empty string)
+             else                  : string of all concatenated seqs
   Dies     : if unable to open sequence file
 
 =cut
@@ -439,7 +439,7 @@ sub fetch_consecutive_seqs {
            : $textw:     width of FASTA seq lines, usually $FASTATEXTW, -1 for unlimited
            : $outfile:   OPTIONAL: name of output FASTA file to create.
   Returns  : if $outfile is defined: string of all concatenated seqs
-             else                  : "" (empty string)
+           : else                  : "" (empty string)
   Dies     : if $outfile is defined and we are unable to open it
 
 =cut
@@ -525,6 +525,46 @@ sub fetch_next_seq_to_sqstring {
   chomp $sqstring;
 
   return $sqstring;
+}
+
+=head2 fetch_next_seq_name_length
+
+  Title    : fetch_next_seq_name_length
+  Incept   : EPN, Wed Mar 20 06:53:08 2019
+  Usage    : Bio::Easel::SqFile->fetch_next_seq_name_length
+  Function : Fetches the next sequence from a sequence file 
+           : and returns its name and length (WITHOUT the actual sequence)
+  Args     : none
+  Returns  : Two values:
+           : name: string, the name of the next sequence (no desc)
+           : length: length of the next sequence
+  Dies     : upon error in _c_fetch_next_seq_to_fasta_string(), with C croak() call
+           : upon error parsing fasta string returned from _c_fetch_next_seq_to_fasta_string
+=cut
+
+sub fetch_next_seq_name_length {
+  my ( $self, $seqname ) = @_;
+
+  $self->_check_sqfile();
+  $self->_check_ssi();
+
+  my $sqstring = _c_fetch_next_seq_to_fasta_string($self->{esl_sqfile}, -1);
+  
+  my $name = undef;
+  if($sqstring =~ /^\>(\S+).*\n/) { 
+    $name = $1; 
+  }
+  else { 
+    die "unable to parse fetched fasta sequence:\n$sqstring"; 
+  }
+
+  # remove the header line 
+  $sqstring =~ s/^\>\S+.*\n//;
+  # remove the new line
+  chomp $sqstring;
+  my $len = length($sqstring);
+
+  return ($name, $len);
 }
 
 =head2 fetch_seq_to_fasta_string_given_ssi_number
