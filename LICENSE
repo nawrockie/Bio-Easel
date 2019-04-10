@@ -1,15 +1,15 @@
 Bio-Easel - Perl wrappers, scripts and subroutines for the Easel sequence analysis library
 
-version 0.07
-June 2017
+version 0.08
+April 2019
 
-Copyright (C) 2013-2018      Eric P. Nawrocki
-Copyright (C) 2013-2018      Sean R. Eddy
-Copyright (C) 2013-2018      Jody Clements
-Copyright (C) 2013-2018      Rob Finn
-Copyright (C) 2013-2018      Travis Wheeler
-Copyright (C) 2013-2018      William Arndt
-Copyright (C) 2013-2018      Howard Hughes Medical Institute
+Copyright (C) 2013-2019      Eric P. Nawrocki
+Copyright (C) 2013-2019      Sean R. Eddy
+Copyright (C) 2013-2019      Jody Clements
+Copyright (C) 2013-2019      Rob Finn
+Copyright (C) 2013-2019      Travis Wheeler
+Copyright (C) 2013-2019      William Arndt
+Copyright (C) 2013-2019      Howard Hughes Medical Institute
 All rights reserved.
 
 ------------------------------------------------------------------
