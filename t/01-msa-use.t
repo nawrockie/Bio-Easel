@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 255;
+use Test::More tests => 257;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -444,9 +444,13 @@ for($mode = 0; $mode <= 1; $mode++) {
 
   ################################################
   # set_rf
-  my $rfstr = ".abcdefghijklmnopqr.stu.vwx.";
+  my $rfstr = ".abcdefghijklmnopqr-stu~vwx.";
   $msa1->set_rf($rfstr);
   is($msa1->get_rf(), $rfstr, "set_rf() seems to be working");
+
+  ################################################
+  # get_rflen
+  is($msa1->get_rflen(), 24, "get_rflen() seems to be working");
 
   ################################################
   # set_ss_cons
