@@ -1,37 +1,27 @@
 Bio-Easel
 
-version 0.08
-April 2019
+version 0.09
+November 2019
 
 The README is used to introduce the module and provide instructions on
 how to install the module, any machine dependencies it may have (for
 example C compilers and installed libraries) and any other information
 that should be provided before the module is installed.
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+Bio-Easel is not in CPAN
 
 INSTALLATION
 
 This module requires the Easel C library, which needs to 
-be cloned from GitHub. Before you can do that you will 
+be downloaded from GitHub. Before you can do that you will 
 need to create a 'src' directory. 
         mkdir src 
-        (cd src; git clone https://github.com/EddyRivasLab/easel.git easel)
-        (cd src/easel; git checkout tags/Bio-Easel-0.08; rm -rf .git)
-  
-  ***The last line of commands will create output stating that you are
-     in a 'detached HEAD' state, which sounds bad. You can safely
-     ignore this. This is because we've checked out a specific commit
-     of the easel git repository. The final part of this command 'rm
-     -rf .git' removes all git related files so that src/easel is no
-     longer under git control anyway.  Part of the reason we do this
-     is as a precaution, so that you don't try to develop easel while
-     in this directory. To do that, you'll need to clone it again, and
-     you should only do that if you know what you're doing.
+        cd src
+        curl -k -L -o easel-Bio-Easel-0.09.zip https://github.com/EddyRivasLab/easel/archive/Bio-Easel-0.09.zip
+        unzip easel-Bio-Easel-0.09.zip
+        mv easel-Bio-Easel-0.09 easel
+        rm easel-Bio-Easel-0.09.zip
+        cd ..
 
 Then, to install this module, run the following commands from the 
 top level Bio-Easel directory:
@@ -47,21 +37,6 @@ After installing, you can find documentation for this module with the
 perldoc command.
 
     perldoc Bio::Easel
-
-You can also look for information at:
-
-    RT, CPAN's request tracker (report bugs here)
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Bio-Easel
-
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/Bio-Easel
-
-    CPAN Ratings
-        http://cpanratings.perl.org/d/Bio-Easel
-
-    Search CPAN
-        http://search.cpan.org/dist/Bio-Easel/
-
 
 LICENSE AND COPYRIGHT
 
