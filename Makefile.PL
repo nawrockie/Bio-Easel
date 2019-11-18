@@ -18,7 +18,7 @@ $easel_src =~ s/Makefile.PL/src\/easel/;
 chdir $easel_src;
 
 system("autoconf");
-system("./configure");
+system("./configure --enable-pic");
 system("make");
 
 chdir $orig_location;

@@ -25,7 +25,7 @@ my $do_randomize = 0;     # set to 1 if -z, output in random order
 my $do_verbose   = 0;     # set to 1 if -v, output some extra info to stdout
 my $do_dirty     = 0;     # 'dirty' mode, don't clean up (e.g. .ssi file).
 my $outfile_root = undef; # root for name of output file, default is $in_sqfile, changed if -oroot used
-my $outfile_dir  = "";    # dir for output files, pwd unless -odir is used   
+my $outfile_dir  = undef; # dir for output files, pwd unless -odir is used   
 my $seed         = 1801;  # seed for RNG
 
 &GetOptions( "oroot=s" => \$outfile_root, 
@@ -39,7 +39,7 @@ my $seed         = 1801;  # seed for RNG
 
 my $usage;
 $usage  = "# esl-ssplit.pl :: split up an input sequence file into smaller files\n";
-$usage .= "# Bio-Easel 0.08 (Apr 2019)\n";
+$usage .= "# Bio-Easel 0.09 (November 2019)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-ssplit.pl [OPTIONS] <seqfile to split> <# seqs for each new file (or # new files if -n)>\n";
@@ -72,7 +72,7 @@ if(! -e $in_sqfile) { die "ERROR $in_sqfile does not exist"; }
 if($nseq_per <= 0)  { die "ERROR \# seqs for each new file must be positive int (got $nseq_per)"; }
 
 # add '/' to $outfile_dir if nec
-if($outfile_dir ne "" && $outfile_dir !~ m/\/$/) { $outfile_dir .= "/"; }
+if((defined $outfile_dir) && ($outfile_dir !~ m/\/$/)) { $outfile_dir .= "/"; }
  
 # make sure -n was used if -r used
 if($do_nres && (! $do_nfiles)) { die "ERROR -r only works in combination with -n"; }
@@ -84,7 +84,13 @@ if($do_randomize && (! $do_nres)) { die "ERROR -z only works in combination with
 if($do_randomize && ($nseq_per > 500)) { die "ERROR, with -z, 2nd cmdline arg (# new files) must be <= 500"; }
 
 # set output root if not set with -oroot
-if(! defined $outfile_root) { $outfile_root = $in_sqfile; }
+if(! defined $outfile_root) { 
+  $outfile_root = $in_sqfile; 
+}
+if(defined $outfile_dir) { 
+  $outfile_root =~ s/^.+\///; # remove path of outfile_root
+  $outfile_root = $outfile_dir . $outfile_root;
+}
 
 # determine if we should remove .ssi file we're about to create at end of script, we do remove unless in dirty mode or .ssi file already exists.
 my $cleanup_ssi = 1;
@@ -93,7 +99,7 @@ if($do_dirty || (-e $in_sqfile . ".ssi")) { $cleanup_ssi = 0; }
 # initialize
 my $fctr = 1;
 my $sctr = 0;
-my $cur_file = $outfile_dir . $outfile_root. "." . $fctr;
+my $cur_file = $outfile_root . "." . $fctr;
 if($do_nfiles) { 
   $nfiles = $nseq_per; 
   $nseq_per = 0; 
@@ -131,7 +137,7 @@ my $cur_nres = 0;
 if(! $do_nres) { 
   # simple case: fetch and output $nseq_per seqs at a time
   while($nseq_remaining > 0) { 
-    my $cur_file = $outfile_dir . $outfile_root. "." . $fctr;
+    my $cur_file = $outfile_root. "." . $fctr;
     $fctr++;
     $cur_nseq = ($nseq_remaining < $nseq_per) ? $nseq_remaining : $nseq_per;
     $sqfile->fetch_consecutive_seqs($cur_nseq, "", -1, $cur_file);
@@ -179,7 +185,7 @@ else {
   for($fidx = 0; $fidx < $nfiles; $fidx++) { $map_A[$fidx] = $fidx; }
   for($fidx = 0; $fidx < $nfiles; $fidx++) { $nres_per_out_A[$fidx] = 0; }
   for($fidx = 0; $fidx < $nfiles; $fidx++) { $nseq_per_out_A[$fidx] = 0; }
-  for($fidx = 0; $fidx < $nfiles; $fidx++) { $out_filename_A[$fidx] = $outfile_dir . $outfile_root. "." . ($fidx+1); } 
+  for($fidx = 0; $fidx < $nfiles; $fidx++) { $out_filename_A[$fidx] = $outfile_root. "." . ($fidx+1); } 
 
   # if $do_randomize, open up all output file handles, else open only the first
   if($do_randomize) { 
