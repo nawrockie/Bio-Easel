@@ -177,6 +177,7 @@ sub concatenate_reformat_maybe_sort_and_diff {
   while(my $line = <IN>) { 
     $diff_output .= $line;
   }
+  close(IN);
 
   push(@unlinkA, ($diff_file, $testfile, $rf_testfile));
   clean_up(\@unlinkA);
