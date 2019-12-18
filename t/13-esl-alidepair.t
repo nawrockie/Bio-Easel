@@ -5,7 +5,7 @@
 # EPN, Wed Dec 18 05:33:16 2019
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 4;
+use Test::More tests => 16;
 
 BEGIN {
   use_ok( 'Bio::Easel::SqFile' ) || print "Bail out!\n";
@@ -21,11 +21,59 @@ my @unlinkA = (); # array of files to unlink at end
 my $diff = undef;
 # test default parameters 
 run_command("$scriptdir/esl-alidepair.pl $in_file out1.df.stk > out1.df.stdout");
-$diff = diff("$datadir/exp.out1.df.stk",    "out1.df.stk",    "out1.df.stk.diff");
+$diff = diff("$datadir/exp.out1.df.stk", "out1.df.stk", "out1.df.stk.diff");
 is($diff, "", "esl-alidepair $in_file depaired correctly (1) with default parameters");
 $diff = diff("$datadir/exp.out1.df.stdout", "out1.df.stdout", "out1.df.stdout.diff");
 is($diff, "", "esl-alidepair $in_file depaired correctly (2) with default parameters");
 push(@unlinkA, ("out1.df.stk", "out1.df.stdout"));
+
+# test -w
+run_command("$scriptdir/esl-alidepair.pl -w $in_file out1.w.stk > out1.w.stdout");
+$diff = diff("$datadir/exp.out1.w.stk", "out1.w.stk", "out1.w.stk.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
+$diff = diff("$datadir/exp.out1.w.stdout", "out1.w.stdout", "out1.w.stdout.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
+push(@unlinkA, ("out1.w.stk", "out1.w.stdout"));
+
+# test --nc 0.5
+run_command("$scriptdir/esl-alidepair.pl --nc 0.5 $in_file out1.nc0p5.stk > out1.nc0p5.stdout");
+$diff = diff("$datadir/exp.out1.nc0p5.stk", "out1.nc0p5.stk", "out1.nc0p5.stk.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
+$diff = diff("$datadir/exp.out1.nc0p5.stdout", "out1.nc0p5.stdout", "out1.nc0p5.stdout.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
+push(@unlinkA, ("out1.nc0p5.stk", "out1.nc0p5.stdout"));
+
+# test --nc 0.8
+run_command("$scriptdir/esl-alidepair.pl --nc 0.8 $in_file out1.nc0p8.stk > out1.nc0p8.stdout");
+$diff = diff("$datadir/exp.out1.nc0p8.stk", "out1.nc0p8.stk", "out1.nc0p8.stk.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
+$diff = diff("$datadir/exp.out1.nc0p8.stdout", "out1.nc0p8.stdout", "out1.nc0p8.stdout.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
+push(@unlinkA, ("out1.nc0p8.stk", "out1.nc0p8.stdout"));
+
+# test -w --nc 0.5
+run_command("$scriptdir/esl-alidepair.pl -w --nc 0.5 $in_file out1.nc0p5.w.stk > out1.nc0p5.w.stdout");
+$diff = diff("$datadir/exp.out1.nc0p5.w.stk", "out1.nc0p5.w.stk", "out1.nc0p5.w.stk.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
+$diff = diff("$datadir/exp.out1.nc0p5.w.stdout", "out1.nc0p5.w.stdout", "out1.nc0p5.w.stdout.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
+push(@unlinkA, ("out1.nc0p5.w.stk", "out1.nc0p5.w.stdout"));
+
+# test --dg 0.5
+run_command("$scriptdir/esl-alidepair.pl --dg 0.5 $in_file out1.dg0p5.stk > out1.dg0p5.stdout");
+$diff = diff("$datadir/exp.out1.dg0p5.stk", "out1.dg0p5.stk", "out1.dg0p5.stk.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
+$diff = diff("$datadir/exp.out1.dg0p5.stdout", "out1.dg0p5.stdout", "out1.dg0p5.stdout.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
+push(@unlinkA, ("out1.dg0p5.stk", "out1.dg0p5.stdout"));
+
+# test -w --dg 0.5
+run_command("$scriptdir/esl-alidepair.pl -w --dg 0.5 $in_file out1.dg0p5.w.stk > out1.dg0p5.w.stdout");
+$diff = diff("$datadir/exp.out1.dg0p5.w.stk", "out1.dg0p5.w.stk", "out1.dg0p5.w.stk.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
+$diff = diff("$datadir/exp.out1.dg0p5.w.stdout", "out1.dg0p5.w.stdout", "out1.dg0p5.w.stdout.diff");
+is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
+push(@unlinkA, ("out1.dg0p5.w.stk", "out1.dg0p5.w.stdout"));
 
 clean_up(\@unlinkA);
 
