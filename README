@@ -1,6 +1,6 @@
 Bio-Easel
 
-version 0.10
+version 0.11
 December 2019
 
 The README is used to introduce the module and provide instructions on
@@ -17,10 +17,10 @@ be downloaded from GitHub. Before you can do that you will
 need to create a 'src' directory. 
         mkdir src 
         cd src
-        curl -k -L -o easel-Bio-Easel-0.09.zip https://github.com/EddyRivasLab/easel/archive/Bio-Easel-0.09.zip
-        unzip easel-Bio-Easel-0.09.zip
-        mv easel-Bio-Easel-0.09 easel
-        rm easel-Bio-Easel-0.09.zip
+        curl -k -L -o easel-Bio-Easel-0.11.zip https://github.com/EddyRivasLab/easel/archive/Bio-Easel-0.11.zip
+        unzip easel-Bio-Easel-0.11.zip
+        mv easel-Bio-Easel-0.11 easel
+        rm easel-Bio-Easel-0.11.zip
         cd ..
 
 Then, to install this module, run the following commands from the 

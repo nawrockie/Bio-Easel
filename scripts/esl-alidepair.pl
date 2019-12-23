@@ -27,7 +27,7 @@ my $min_fractdg = undef; # defined if --dg used
 
 my $usage;
 $usage  = "# esl-alidpair.pl :: remove consensus basepairs based on alignment posterior probabilities\n";
-$usage .= "# Bio-Easel 0.10 (December 2019)\n";
+$usage .= "# Bio-Easel 0.11 (December 2019)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-alidepair.pl [OPTIONS] <alignment file to work on> <name of output alignment file>\n";
@@ -147,7 +147,13 @@ for($apos = 0; $apos < $alen; $apos++) {
   $rpos = $ctA[$lpos];
   if($rpos > $lpos) { # lpos and rpos make a basepair ($lpos < $rpos)
     if($do_nc) { 
-      $ncfractA[$apos] /= ($tot_nseq - $ngapA[$apos]);
+      my $denom = ($tot_nseq - $ngapA[$apos]);
+      if($denom == 0) { 
+        $ncfractA[$apos] = 0.;
+      }
+      else{ 
+        $ncfractA[$apos] /= $denom;
+      }
       if($ncfractA[$apos] > $min_fractnc) { 
         $remove_str = "yes";
         $new_ssconsA[$apos] = ".";
@@ -159,7 +165,7 @@ for($apos = 0; $apos < $alen; $apos++) {
       printf("%5d  %5d  %5.3f  %11.1f  %11.1f  %7s\n", $lpos, $rpos, $ncfractA[$apos], $tot_nseq - $ngapA[$apos], $ngapA[$apos], $remove_str);
     }
     elsif($do_dg) { 
-      $dgfractA[$apos] = $ngapA[$apos] / $tot_nseq;
+      $dgfractA[$apos] = ($tot_nseq > 0) ? ($ngapA[$apos] / $tot_nseq) : 0.;
       if($dgfractA[$apos] > $min_fractdg) { 
         $remove_str = "yes";
         $new_ssconsA[$apos] = ".";
@@ -171,7 +177,13 @@ for($apos = 0; $apos < $alen; $apos++) {
       printf("%5d  %5d  %5.3f  %11.1f  %11.1f  %7s\n", $lpos, $rpos, $dgfractA[$apos], $tot_nseq - $ngapA[$apos], $ngapA[$apos], $remove_str);
     }
     else { 
-      $avgppA[$apos] /= (($tot_nseq * 2.) - $ngapA[$apos]);
+      my $denom = (($tot_nseq * 2.) - $ngapA[$apos]);
+      if($denom == 0) { 
+        $avgppA[$apos] = 0.;
+      }
+      else { 
+        $avgppA[$apos] /= $denom;
+      }
       if($avgppA[$apos] < $min_avgpp) { 
         $remove_str = "yes";
         $new_ssconsA[$apos] = ".";
