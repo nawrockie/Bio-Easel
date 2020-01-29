@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 257;
+use Test::More tests => 267;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -686,3 +686,37 @@ for($mode = 0; $mode <= 1; $mode++) {
   if(defined $msa1) { undef $msa1; }
 }
   
+################################################
+# get_ppstr_avg
+my $ppstr1 = "99**887755..33..001";
+my $ppstr2 = ".99**887755..33..001..";
+my $ppstr3 = "99**887755..33..001..";
+my $ppstr4 = "...99**887.755..33..001";
+my $ppstr5 = "99**88775533001";
+
+my ($ppavg, $ppct);
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr1);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr2);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr3);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr4);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr5);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+

@@ -181,7 +181,7 @@ sub new {
 
   Title    : msa
   Incept   : EPN, Tue Jan 29 09:06:30 2013
-  Usage    : Bio::Easel::MSA->msa()
+  Usage    : $msaObject->msa()
   Function : Accessor for msa: sets (if nec) and returns MSA.
   Args     : none
   Returns  : msa   
@@ -203,7 +203,7 @@ sub msa {
 
   Title    : path
   Incept   : EPN, Tue Jan 30 15:42:30 2013
-  Usage    : Bio::Easel::MSA->path()
+  Usage    : $msaObject->path()
   Function : Accessor for path, read only.
   Args     : none
   Returns  : string containing path to the SEED or undef.   
@@ -264,7 +264,7 @@ sub is_digitized {
 
   Title    : read_msa
   Incept   : EPN, Mon Jan 28 09:26:24 2013
-  Usage    : Bio::Easel::MSA->read_msa($fileLocation)
+  Usage    : $msaObject->read_msa($fileLocation)
   Function : Opens $fileLocation, reads first MSA, sets it.
   Args     : <fileLocation>: file location of alignment, required unless $self->{path} already set
            : <reqdFormat>:   optional, required format of alignment file
@@ -944,7 +944,7 @@ sub write_single_unaligned_seq {
 
   Title    : any_allgap_columns
   Incept   : EPN, Mon Jan 28 10:44:12 2013
-  Usage    : Bio::Easel::MSA->any_allgap_columns()
+  Usage    : $msaObject->any_allgap_columns()
   Function : Return TRUE if any all gap columns exist in MSA
   Args     : none
   Returns  : TRUE if any all gap columns, FALSE if not
@@ -2972,25 +2972,49 @@ sub get_pp_avg {
   my $full_ppstring = _c_get_ppstring_aligned( $self->{esl_msa}, $idx );
   my $pplen    = $epos-$spos+1;
   my $ppstring = substr($full_ppstring, $spos-1, $pplen);
-  my @pp_A = split("", $ppstring);
+  
+  my ($ppavg, $ppct) = return Bio::Easel::MSA->get_ppstr_avg($ppstring);
+}
 
+#-------------------------------------------------------------------------------
+
+=head2 get_ppstr_avg
+
+  Title    : get_ppstr_avg
+  Incept   : EPN, Wed Jan 29 09:45:37 2020
+  Usage    : Bio::Easel::MSA::get_ppstr_avg($ppstr)
+  Function : Return the average posterior probability of a posterior probability
+           : string, potentially with gaps.
+  Args     : <ppstr>:  string of posterior probability values, possible with gaps (.)
+  Returns  : two values:
+           :   1) average aligned posterior probability annotation for sequence index idx from aligned positions spos..epos
+           :   2) number of nongap positions for sequence index idx from aligned positions spos..epos
+
+=cut
+
+sub get_ppstr_avg { 
+  my ( $caller, $ppstr ) = @_;
+
+  my $pplen = length($ppstr);
+  print("ppstr: $ppstr\n");
+  my @pp_A = split("", $ppstr);
   my $ppavg = 0.; # sum, then average, of all posterior probability values
   my $ppct  = 0;  # number of nongap posterior probability values
   for(my $ppidx = 0; $ppidx < $pplen; $ppidx++) { 
     my $ppval = $pp_A[$ppidx];
     if   ($ppval eq ".") { ; } # do nothing 
-    elsif($ppval eq "*") { $ppavg += 0.975; $ppct++; } # do nothing 
-    elsif($ppval eq "9") { $ppavg += 0.9;   $ppct++; } # do nothing 
-    elsif($ppval eq "8") { $ppavg += 0.8;   $ppct++; } # do nothing 
-    elsif($ppval eq "7") { $ppavg += 0.7;   $ppct++; } # do nothing 
-    elsif($ppval eq "6") { $ppavg += 0.6;   $ppct++; } # do nothing 
-    elsif($ppval eq "5") { $ppavg += 0.5;   $ppct++; } # do nothing 
-    elsif($ppval eq "4") { $ppavg += 0.4;   $ppct++; } # do nothing 
-    elsif($ppval eq "3") { $ppavg += 0.3;   $ppct++; } # do nothing 
-    elsif($ppval eq "2") { $ppavg += 0.2;   $ppct++; } # do nothing 
-    elsif($ppval eq "1") { $ppavg += 0.1;   $ppct++; } # do nothing 
-    elsif($ppval eq "0") { $ppavg += 0.025; $ppct++; } # do nothing 
-    else { croak "ERROR in get_pp_avg(), unexpected PP value of $ppval"; }
+    elsif($ppval eq "*") { $ppavg += 0.975; $ppct++; }
+    elsif($ppval eq "9") { $ppavg += 0.9;   $ppct++; }
+    elsif($ppval eq "8") { $ppavg += 0.8;   $ppct++; }
+    elsif($ppval eq "7") { $ppavg += 0.7;   $ppct++; }
+    elsif($ppval eq "6") { $ppavg += 0.6;   $ppct++; }
+    elsif($ppval eq "5") { $ppavg += 0.5;   $ppct++; }
+    elsif($ppval eq "4") { $ppavg += 0.4;   $ppct++; }
+    elsif($ppval eq "3") { $ppavg += 0.3;   $ppct++; }
+    elsif($ppval eq "2") { $ppavg += 0.2;   $ppct++; }
+    elsif($ppval eq "1") { $ppavg += 0.1;   $ppct++; }
+    elsif($ppval eq "0") { $ppavg += 0.025; $ppct++; }
+    else { croak "ERROR in get_ppstr_avg(), unexpected PP value of $ppval"; }
   }
   if($ppct > 0) { 
     $ppavg /= $ppct; 
@@ -3031,7 +3055,7 @@ sub DESTROY {
 
   Title    : _check_msa
   Incept   : EPN, Sat Feb  2 13:42:27 2013
-  Usage    : Bio::Easel::MSA->_check_msa()
+  Usage    : $msaObject->_check_msa()
   Function : Reads msa only if it is currently undefined
   Args     : none
   Returns  : void
