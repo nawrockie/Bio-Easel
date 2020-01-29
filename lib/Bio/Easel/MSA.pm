@@ -1628,10 +1628,10 @@ sub addGR {
 
   Title    : getGR_given_tag
   Incept   : EPN, Wed Jan 29 11:47:34 2020
-  Usage    : $msaObject->getGR_given_tag($tag)
+  Usage    : $msaObject->getGR_given_tag($tag, $sqidx)
   Function : Return GR annotation named <tag> of an ESL_MSA
            : for sequence <$sqidx> as a string.
-  Args     : $tag:    name of GC annotation
+  Args     : $tag:    name of GR annotation
            : $sqidx:  sequence index [0..nseq-1]
   Returns  : $annstr: GR annotation, as a string.
 
@@ -1645,6 +1645,36 @@ sub getGR_given_tag {
 
   if(! (_c_hasGR( $self->{esl_msa}, $tag, $sqidx ))) { croak("trying to get GR annotation $tag for seq $sqidx that does not exist"); }
   return _c_getGR_given_tag( $self->{esl_msa}, $tag, $sqidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_given_idx
+
+  Title    : getGR_given_idx
+  Incept   : EPN, Wed Jan 29 12:16:41 2020
+  Usage    : $msaObject->getGR_given_idx($tagidx, $sqidx)
+  Function : Return GR annotation of idx <tagidx> of an ESL_MSA
+           : for sequence <$sqidx> as a string.
+  Args     : $tagidx: idx of GR annotation
+           : $sqidx:  sequence index [0..nseq-1]
+  Returns  : $annstr: GR annotation, as a string.
+
+=cut
+
+sub getGR_given_idx {
+  my ( $self, $tagidx, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  if($tagidx >= $self->getGR_number) { croak("trying to get GR annotation for tag idx $tagidx that does not exist"); }
+  if(_c_hasGR_given_idx( $self->{esl_msa}, $tagidx, $sqidx )) { 
+    return _c_getGR_given_idx( $self->{esl_msa}, $tagidx, $sqidx );
+  }
+  else { 
+    croak("trying to get GR annotation for tag idx $tagidx for seq $sqidx, tag exists but not for this seq"); 
+  }
 }
 
 #-------------------------------------------------------------------------------
@@ -1668,7 +1698,139 @@ sub hasGR {
 
   $self->_check_msa();
   $self->_check_sqidx($sqidx);
-  return (_c_hasGR( $self->{esl_msa}, $tag, $sqidx ));
+  return _c_hasGR( $self->{esl_msa}, $tag, $sqidx );
+}
+#-------------------------------------------------------------------------------
+
+=head2 hasGR_given_idx
+
+  Title    : hasGR_given_idx
+  Incept   : EPN, Wed Jan 29 12:22:16 2020
+  Usage    : $msaObject->hasGR_given_idx($tagidx, $sqidx)
+  Function : Return '1' if GR annotation with tag idx <tagidx> exists
+           : for sequence index $sqidx (0..$nseq-1),
+           : else return '0'.
+  Args     : $tagidx: index of tag (not including SS, SA, PP)
+           : $sqidx:  seq index we are interested in
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGR_given_idx {
+  my ( $self, $tagidx, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+  return _c_hasGR_given_idx( $self->{esl_msa}, $tagidx, $sqidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 hasGR_any_seqidx
+
+  Title    : hasGR_any_seqidx
+  Incept   : EPN, Wed Jan 29 12:44:00 2020
+  Usage    : $msaObject->hasGR_any_seqidx($tag)
+  Function : Return '1' if GR annotation named <tag> exists
+           : for any sequence index
+           : else return '0'.
+  Args     : $tag:   name of unparsed GR annotation
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGR_any_seqidx {
+  my ( $self, $tag, $sqidx ) = @_;
+
+  $self->_check_msa();
+  return _c_hasGR_any_seqidx( $self->{esl_msa}, $tag);
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 hasGR_given_idx_any_seqidx
+
+  Title    : hasGR_given_idx_any_seqidx
+  Incept   : EPN, Wed Jan 29 12:46:50 2020
+  Usage    : $msaObject->hasGR_given_idx_any_sqidx($tagidx)
+  Function : Return '1' if GR annotation with tag idx <tagidx> exists
+           : else return '0'.
+  Args     : $tagidx: index of tag (not including SS, SA, PP)
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGR_given_idx_any_seqidx {
+  my ( $self, $tagidx, $sqidx ) = @_;
+
+  $self->_check_msa();
+  return _c_hasGR_given_idx_any_seqidx( $self->{esl_msa}, $tagidx);
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_number
+
+  Title    : getGR_number
+  Incept   : EPN, Wed Jan 29 12:19:28 2020
+  Usage    : $msaObject->getGR_number()
+  Function : Return number of GR annotations available.
+  Args     : none
+  Returns  : number of GR annotations stored in MSA
+             (not including SS, SA, and PP, 
+               which are stored in a special way
+              (not in msa->gr))
+
+=cut
+
+sub getGR_number {
+  my ( $self, $tag ) = @_;
+
+  $self->_check_msa();
+  return (_c_getGR_number( $self->{esl_msa}));
+}
+
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_tag
+
+  Title    : getGR_tag
+  Incept   : EPN, Wed Jan 29 12:28:39 2020
+  Usage    : $msaObject->getGR_tag($tagidx)
+  Function : Return GR tag of idx <tagidx> as a string
+  Args     : $tagidx: idx of tag you want
+  Returns  : $tag: string
+
+=cut
+
+sub getGR_tag {
+  my ( $self, $tagidx ) = @_;
+
+  $self->_check_msa();
+  if($tagidx >= $self->getGR_number) { croak("trying to get GR tag idx $tagidx that does not exist"); }
+  return _c_getGR_tag( $self->{esl_msa}, $tagidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_tagidx
+
+  Title    : getGR_tagidx
+  Incept   : EPN, Wed Jan 29 12:29:44 2020
+  Usage    : $msaObject->getGR_tagidx($tag)
+  Function : Return the idx of GR annotation with tag <tag>.
+  Args     : $tag: tag of annotation you want idx of
+  Returns  : $tagidx: idx of GR annotation
+  Dies     : if annotation with tag $tag does not exist.
+=cut
+
+sub getGR_tagidx {
+  my ( $self, $tag ) = @_;
+
+  $self->_check_msa();
+  if(! $self->hasGR_any_seqidx($tag)) { croak("trying to get idx of tag $tag that does not exist"); }
+  return _c_getGR_tagidx( $self->{esl_msa}, $tag );
 }
 
 #-------------------------------------------------------------------------------

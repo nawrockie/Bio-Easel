@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 71;
+use Test::More tests => 91;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -171,7 +171,35 @@ for(my $mode = 0; $mode <= 1; $mode++) {
   $test_gr = $pp_msa->getGR_given_tag("fooey", 2);
   is($test_gr, "this-is-a-test-of-GR-annotation", "addGR and getGR_given_tag correctly add and get GR annotation for seq 3 (fooey)");
 
-  # test getGR_tagidx, getGR_tag, getGR_given_idx
+  ########
+  # test getGR_tagidx, getGR_tag, hasGR_given_idx, getGR_given_idx, 
+  $tagidx = $pp_msa->getGR_tagidx("test");
+  is($tagidx, "0", "getGR_tagidx seems to work");
 
+  $tagidx = $pp_msa->getGR_tagidx("foo");
+  is($tagidx, "1", "getGR_tagidx seems to work");
 
+  $tagnum = $pp_msa->getGR_number();  
+  is($tagnum, "3", "getGR_number seems to work");
+
+  $tag = $pp_msa->getGR_tag(2);  
+  is($tag, "fooey", "getGR_tag seems to work");
+
+  $has_gr = $pp_msa->hasGR_given_idx(1, 0);
+  is($has_gr, "1", "hasGR_given_idx correctly detects presence of tag for seq 1 tag 2");
+
+  $has_gr = $pp_msa->hasGR_given_idx(2, 0);
+  is($has_gr, "0", "hasGR_given_idx correctly detects absence of tag for seq 1 tag 3");
+
+  $has_gr = $pp_msa->hasGR_given_idx(0, 2);
+  is($has_gr, "0", "hasGR_given_idx correctly detects absence of tag for seq 3 tag 1");
+
+  $has_gr = $pp_msa->hasGR_given_idx(2, 2);
+  is($has_gr, "1", "hasGR_given_idx correctly detects presence of tag for seq 3 tag 3");
+
+  $test_gr = $pp_msa->getGR_given_idx(1, 0);
+  is($test_gr, "1231231231231231231231231231231", "getGR_given_idx correctly gets GR annotation for seq 1 tag 2");
+
+  $test_gr = $pp_msa->getGR_given_idx(2, 2);
+  is($test_gr, "this-is-a-test-of-GR-annotation", "getGR_given_idx correctly gets GR annotation for seq 3 tag 3");
 }
