@@ -914,6 +914,18 @@ int _c_addGC(ESL_MSA *msa, char *tag, char *value)
   return status;
 }
 
+/* Function:  _c_addGR()
+ * Incept:    EPN, Wed Jan 29 11:11:18 2020
+ * Purpose:   Add GR annotation to MSA.
+ * Returns:   eslOK on success, ! eslOK on failure.
+ */
+int _c_addGR(ESL_MSA *msa, char *tag, int sqidx, char *value)
+{
+  int    status;
+  status = esl_msa_AppendGR(msa, tag, sqidx, value);
+  return status;
+}
+
 /* Function:  _c_addGS()
  * Incept:    EPN, Sat Feb  2 14:48:47 2013
  * Purpose:   Add GS annotation to a sequence in a MSA.
@@ -1031,6 +1043,38 @@ int _c_hasGC (ESL_MSA *msa, char *tag)
   }   
 }
 
+/* Function:  _c_hasGR
+ * Incept:    EPN, Wed Jan 29 11:32:42 2020
+ * Synopsis:  Returns '1' if a msa has GR annotation for sequence <sqidx>
+ *            with the tag <tag>,
+ *            else returns '0'.
+ */
+int _c_hasGR (ESL_MSA *msa, char *tag, int sqidx)
+{
+  int status;
+  int tagidx;
+  
+  if(strcmp(tag, "SS") == 0) return ((msa->ss == NULL) || (msa->ss[sqidx] == NULL)) ? 0 : 1;
+  if(strcmp(tag, "SA") == 0) return ((msa->sa == NULL) || (msa->sa[sqidx] == NULL)) ? 0 : 1;
+  if(strcmp(tag, "PP") == 0) return ((msa->pp == NULL) || (msa->pp[sqidx] == NULL)) ? 0 : 1;
+  
+  /* not a parsed tag, search for it */
+  /* get tagidx for this GR tag */
+  if(msa->ngr > 0) { 
+    status = esl_keyhash_Lookup(msa->gr_idx, tag, -1, &tagidx);
+    if(status == eslOK) { 
+      // tag exists, but is it valid for this sequence? 
+      return (msa->gr[tagidx][sqidx] == NULL) ? 0 : 1;
+    }
+    else { 
+      return 0;
+    }
+  }
+  else { 
+    return 0;
+  }
+}
+
 /* Function:  _c_getGC_given_tag
  * Incept:    EPN, Fri May 24 09:58:32 2013
  * Synopsis:  Returns the GC annotation pertaining to tag <tag>.
@@ -1051,10 +1095,35 @@ char *_c_getGC_given_tag (ESL_MSA *msa, char *tag)
   if(strcmp(tag, "MM")      == 0) return msa->mm;
 
   /* not a parsed tag, search for it */
-  /* get tagidx for this GC tag. existing tag: <ngc; new: == ngc. */
+  /* get tagidx for this GC tag */
   status = esl_keyhash_Lookup(msa->gc_idx, tag, -1, &tagidx);
-  if (status != eslOK) croak("_c_getGC unexpected error, tag %s seems to exist but it does not", tag);
+  if (status != eslOK) croak("_c_getGC_given_tag unexpected error, tag %s seems to exist but it does not", tag);
   return msa->gc[tagidx];
+}
+
+/* Function:  _c_getGR_given_tag
+ * Incept:    EPN, Wed Jan 29 11:58:36 2020
+ * Synopsis:  Returns the GR annotation pertaining to tag <tag>
+ *            for seq <sqidx>
+ * Returns:   the GC annotation with tag <tag> as a string
+ */
+char *_c_getGR_given_tag (ESL_MSA *msa, char *tag, int sqidx)
+{
+  int status;
+  int tagidx;
+
+  if(! (_c_hasGR(msa, tag, sqidx))) croak("_c_getGR, no such annotation exists");
+  /* we've already verified it exists with the _c_hasGR call, hence
+   * the lack of checks for NULL below */
+  if(strcmp(tag, "SS") == 0) return msa->ss[sqidx];
+  if(strcmp(tag, "SA") == 0) return msa->sa[sqidx];
+  if(strcmp(tag, "PP") == 0) return msa->pp[sqidx];
+
+  /* not a parsed tag, search for it */
+  /* get tagidx for this GR tag */
+  status = esl_keyhash_Lookup(msa->gr_idx, tag, -1, &tagidx);
+  if (status != eslOK) croak("_c_getGR_given_tag unexpected error, tag %s seems to exist but it does not", tag);
+  return msa->gr[tagidx][sqidx];
 }
 
 /* Function:  _c_getGC_given_idx

@@ -1,20 +1,28 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 45;
+use Test::More tests => 71;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
 }
 
 my ($alnfile, $line, $msa, $outfile, $has_rf, $alnfile2, $has_gc, $test_gc, $foo_gc, $tagidx, $tag, $tagnum);
+my ($pp_alnfile, $grstr1, $grstr2, $grstr3, $has_gr, $test_gr);
 my @gcA  = ();
 my @gcA2 = ();
 $alnfile = "./t/data/test.sto";
+$pp_alnfile = "./t/data/test-pp.sto";
 
 # do all tests twice, once in digital and once in text mode
 for(my $mode = 0; $mode <= 1; $mode++) { 
    my $msa = Bio::Easel::MSA->new({
      fileLocation => $alnfile, 
+     forceText    => $mode,
+   });
+   isa_ok($msa, "Bio::Easel::MSA");
+
+   my $pp_msa = Bio::Easel::MSA->new({
+     fileLocation => $pp_alnfile, 
      forceText    => $mode,
    });
    isa_ok($msa, "Bio::Easel::MSA");
@@ -113,6 +121,57 @@ for(my $mode = 0; $mode <= 1; $mode++) {
 
   $foo_gc = $msa->getGC_given_idx(1);
   is($foo_gc, "77777222223333344444JJJJJ666", "getGC_given_idx correctly gets GC annotation");
-  
+
+  ################################  
+  # test addGR and hasGR
+
+  $grstr1 = ".123123123123123123.123.123.123";
+  $grstr2 = "1231231231231231231231231231231";
+  $grstr3 = "this-is-a-test-of-GR-annotation";
+
+  $has_gr = $pp_msa->hasGR("PP", 0);
+  is($has_gr, "1", "hasGR correctly notes presence of PP annotation for seq 1");
+
+  $has_gr = $pp_msa->hasGR("SS", 0);
+  is($has_gr, "0", "hasGR correctly notes absence of SS annotation for seq 1");
+
+  $has_gr = $pp_msa->hasGR("test", 0);
+  is($has_gr, "0", "hasGR correctly notes absence of GR annotation for seq 1");
+
+  $pp_msa->addGR("test", 0, $grstr1);
+
+  $has_gr = $pp_msa->hasGR("test", 0);
+  is($has_gr, "1", "hasGR correctly notes presence of GR annotation for seq 1");
+
+  $has_gr = $pp_msa->hasGR("test", 2);
+  is($has_gr, "0", "hasGR correctly notes absence of GR annotation for seq 3");
+
+  $pp_msa->addGR("foo", 0, $grstr2);
+
+  $has_gr = $pp_msa->hasGR("foo", 0);
+  is($has_gr, "1", "hasGR correctly notes presence of second GR annotation for seq 1");
+
+  $pp_msa->addGR("fooey", 2, $grstr3);
+
+  $has_gr = $pp_msa->hasGR("fooey", 2);
+  is($has_gr, "1", "hasGR correctly notes presence of GR annotation for seq 3");
+
+  $has_gr = $pp_msa->hasGR("fooey", 0);
+  is($has_gr, "0", "hasGR correctly notes absence of GR annotation for seq 1");
+
+  $has_gr = $pp_msa->hasGR("fooey", 1);
+  is($has_gr, "0", "hasGR correctly notes absence of GR annotation for seq 2");
+
+  $test_gr = $pp_msa->getGR_given_tag("test", 0);
+  is($test_gr, ".123123123123123123.123.123.123", "addGR and getGR_given_tag correctly add and get GR annotation for seq 1 (test)");
+
+  $test_gr = $pp_msa->getGR_given_tag("foo", 0);
+  is($test_gr, "1231231231231231231231231231231", "addGR and getGR_given_tag correctly add and get GR annotation for seq 1 (foo)");
+
+  $test_gr = $pp_msa->getGR_given_tag("fooey", 2);
+  is($test_gr, "this-is-a-test-of-GR-annotation", "addGR and getGR_given_tag correctly add and get GR annotation for seq 3 (fooey)");
+
+  # test getGR_tagidx, getGR_tag, getGR_given_idx
+
 
 }

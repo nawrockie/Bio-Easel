@@ -1592,6 +1592,88 @@ sub getGC_tagidx {
 
 #-------------------------------------------------------------------------------
 
+=head2 addGR
+
+  Title    : addGR
+  Incept   : EPN, Wed Jan 29 11:13:04 2020
+  Usage    : $msaObject->addGR($tag, $seqidx, $annAR)
+  Function : Add GR annotation to an ESL_MSA for sequence
+           : <$sqidx> with tag <$tag> and column annotation
+           : in the array referenced by <$annAR>
+  Args     : $tag:    name of GC annotation (e.g. SS_cons)
+           : $sqidx:  seq index to add GR for [0..nseq-1]
+           : $annstr: string that is the per-residue annotation
+           :          must be same length as alignment length.
+  Returns  : void
+
+=cut
+
+sub addGR {
+  my ( $self, $tag, $sqidx, $annstr ) = @_;
+
+  # contract checks
+  if((! defined $annstr) || (length($annstr) != $self->alen)) { croak "ERROR: unable to add GR annotation because it is empty or the wrong length"; }
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  # add it
+  my $status = _c_addGR( $self->{esl_msa}, $tag, $sqidx, $annstr);
+  if ( $status != $ESLOK ) { croak "ERROR: unable to add GR annotation"; }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_given_tag
+
+  Title    : getGR_given_tag
+  Incept   : EPN, Wed Jan 29 11:47:34 2020
+  Usage    : $msaObject->getGR_given_tag($tag)
+  Function : Return GR annotation named <tag> of an ESL_MSA
+           : for sequence <$sqidx> as a string.
+  Args     : $tag:    name of GC annotation
+           : $sqidx:  sequence index [0..nseq-1]
+  Returns  : $annstr: GR annotation, as a string.
+
+=cut
+
+sub getGR_given_tag {
+  my ( $self, $tag, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  if(! (_c_hasGR( $self->{esl_msa}, $tag, $sqidx ))) { croak("trying to get GR annotation $tag for seq $sqidx that does not exist"); }
+  return _c_getGR_given_tag( $self->{esl_msa}, $tag, $sqidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 hasGR
+
+  Title    : hasGR
+  Incept   : EPN, Wed Jan 29 11:29:32 2020
+  Usage    : $msaObject->hasGR($tag, $sqidx)
+  Function : Return '1' if GR annotation named <tag> exists
+           : for sequence index $sqidx (0..$nseq-1),
+           : else return '0'.
+  Args     : $tag:   name of unparsed GR annotation
+           : $sqidx: seq index we are interested in
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGR {
+  my ( $self, $tag, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+  return (_c_hasGR( $self->{esl_msa}, $tag, $sqidx ));
+}
+
+#-------------------------------------------------------------------------------
+
+
 =head2 weight_GSC
 
   Title    : weight_GSC
@@ -3091,7 +3173,7 @@ sub _check_sqidx {
   $self->_check_msa();
   my $nseq = $self->nseq;
   if ( $idx < 0 || $idx >= $nseq ) {
-    croak (sprintf("invalid sequence index %d (must be [0..%d])", $idx, $nseq));
+    croak (sprintf("invalid sequence index %d (must be [0..%d])", $idx, $nseq-1));
   }
   return;
 }
