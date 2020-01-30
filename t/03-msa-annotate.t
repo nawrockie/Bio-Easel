@@ -129,47 +129,47 @@ for(my $mode = 0; $mode <= 1; $mode++) {
   $grstr2 = "1231231231231231231231231231231";
   $grstr3 = "this-is-a-test-of-GR-annotation";
 
-  $has_gr = $pp_msa->hasGR("PP", 0);
-  is($has_gr, "1", "hasGR correctly notes presence of PP annotation for seq 1");
+  $has_gr = $pp_msa->hasGR_given_tag_sqidx("PP", 0);
+  is($has_gr, "1", "hasGR_given_tag_sqidx correctly notes presence of PP annotation for seq 1");
 
-  $has_gr = $pp_msa->hasGR("SS", 0);
-  is($has_gr, "0", "hasGR correctly notes absence of SS annotation for seq 1");
+  $has_gr = $pp_msa->hasGR_given_tag_sqidx("SS", 0);
+  is($has_gr, "0", "hasGR_given_tag_sqidx correctly notes absence of SS annotation for seq 1");
 
-  $has_gr = $pp_msa->hasGR("test", 0);
-  is($has_gr, "0", "hasGR correctly notes absence of GR annotation for seq 1");
+  $has_gr = $pp_msa->hasGR_given_tag_sqidx("test", 0);
+  is($has_gr, "0", "hasGR_given_tag_sqidx correctly notes absence of GR annotation for seq 1");
 
   $pp_msa->addGR("test", 0, $grstr1);
 
-  $has_gr = $pp_msa->hasGR("test", 0);
-  is($has_gr, "1", "hasGR correctly notes presence of GR annotation for seq 1");
+  $has_gr = $pp_msa->hasGR_given_tag_sqidx("test", 0);
+  is($has_gr, "1", "hasGR_given_tag_sqidx correctly notes presence of GR annotation for seq 1");
 
-  $has_gr = $pp_msa->hasGR("test", 2);
-  is($has_gr, "0", "hasGR correctly notes absence of GR annotation for seq 3");
+  $has_gr = $pp_msa->hasGR_given_tag_sqidx("test", 2);
+  is($has_gr, "0", "hasGR_given_tag_sqidx correctly notes absence of GR annotation for seq 3");
 
   $pp_msa->addGR("foo", 0, $grstr2);
 
-  $has_gr = $pp_msa->hasGR("foo", 0);
-  is($has_gr, "1", "hasGR correctly notes presence of second GR annotation for seq 1");
+  $has_gr = $pp_msa->hasGR_given_tag_sqidx("foo", 0);
+  is($has_gr, "1", "hasGR_given_tag_sqidx correctly notes presence of second GR annotation for seq 1");
 
   $pp_msa->addGR("fooey", 2, $grstr3);
 
-  $has_gr = $pp_msa->hasGR("fooey", 2);
-  is($has_gr, "1", "hasGR correctly notes presence of GR annotation for seq 3");
+  $has_gr = $pp_msa->hasGR_given_tag_sqidx("fooey", 2);
+  is($has_gr, "1", "hasGR_given_tag_sqidx correctly notes presence of GR annotation for seq 3");
 
-  $has_gr = $pp_msa->hasGR("fooey", 0);
-  is($has_gr, "0", "hasGR correctly notes absence of GR annotation for seq 1");
+  $has_gr = $pp_msa->hasGR_given_tag_sqidx("fooey", 0);
+  is($has_gr, "0", "hasGR_given_tag_sqidx correctly notes absence of GR annotation for seq 1");
 
-  $has_gr = $pp_msa->hasGR("fooey", 1);
-  is($has_gr, "0", "hasGR correctly notes absence of GR annotation for seq 2");
+  $has_gr = $pp_msa->hasGR_given_tag_sqidx("fooey", 1);
+  is($has_gr, "0", "hasGR_given_tag_sqidx correctly notes absence of GR annotation for seq 2");
 
-  $test_gr = $pp_msa->getGR_given_tag("test", 0);
-  is($test_gr, ".123123123123123123.123.123.123", "addGR and getGR_given_tag correctly add and get GR annotation for seq 1 (test)");
+  $test_gr = $pp_msa->getGR_given_tag_sqidx("test", 0);
+  is($test_gr, ".123123123123123123.123.123.123", "addGR and getGR_given_tag_sqidx correctly add and get GR annotation for seq 1 (test)");
 
-  $test_gr = $pp_msa->getGR_given_tag("foo", 0);
-  is($test_gr, "1231231231231231231231231231231", "addGR and getGR_given_tag correctly add and get GR annotation for seq 1 (foo)");
+  $test_gr = $pp_msa->getGR_given_tag_sqidx("foo", 0);
+  is($test_gr, "1231231231231231231231231231231", "addGR and getGR_given_tag_sqidx correctly add and get GR annotation for seq 1 (foo)");
 
-  $test_gr = $pp_msa->getGR_given_tag("fooey", 2);
-  is($test_gr, "this-is-a-test-of-GR-annotation", "addGR and getGR_given_tag correctly add and get GR annotation for seq 3 (fooey)");
+  $test_gr = $pp_msa->getGR_given_tag_sqidx("fooey", 2);
+  is($test_gr, "this-is-a-test-of-GR-annotation", "addGR and getGR_given_tag_sqidx correctly add and get GR annotation for seq 3 (fooey)");
 
   ########
   # test getGR_tagidx, getGR_tag, hasGR_given_idx, getGR_given_idx, 
@@ -185,21 +185,21 @@ for(my $mode = 0; $mode <= 1; $mode++) {
   $tag = $pp_msa->getGR_tag(2);  
   is($tag, "fooey", "getGR_tag seems to work");
 
-  $has_gr = $pp_msa->hasGR_given_idx(1, 0);
-  is($has_gr, "1", "hasGR_given_idx correctly detects presence of tag for seq 1 tag 2");
+  $has_gr = $pp_msa->hasGR_given_tagidx_sqidx(1, 0);
+  is($has_gr, "1", "hasGR_given_tagidx_sqidx correctly detects presence of tag for seq 1 tag 2");
 
-  $has_gr = $pp_msa->hasGR_given_idx(2, 0);
-  is($has_gr, "0", "hasGR_given_idx correctly detects absence of tag for seq 1 tag 3");
+  $has_gr = $pp_msa->hasGR_given_tagidx_sqidx(2, 0);
+  is($has_gr, "0", "hasGR_given_tagidx_sqidx correctly detects absence of tag for seq 1 tag 3");
 
-  $has_gr = $pp_msa->hasGR_given_idx(0, 2);
-  is($has_gr, "0", "hasGR_given_idx correctly detects absence of tag for seq 3 tag 1");
+  $has_gr = $pp_msa->hasGR_given_tagidx_sqidx(0, 2);
+  is($has_gr, "0", "hasGR_given_tagidx_sqidx correctly detects absence of tag for seq 3 tag 1");
 
-  $has_gr = $pp_msa->hasGR_given_idx(2, 2);
-  is($has_gr, "1", "hasGR_given_idx correctly detects presence of tag for seq 3 tag 3");
+  $has_gr = $pp_msa->hasGR_given_tagidx_sqidx(2, 2);
+  is($has_gr, "1", "hasGR_given_tagidx_sqidx correctly detects presence of tag for seq 3 tag 3");
 
-  $test_gr = $pp_msa->getGR_given_idx(1, 0);
-  is($test_gr, "1231231231231231231231231231231", "getGR_given_idx correctly gets GR annotation for seq 1 tag 2");
+  $test_gr = $pp_msa->getGR_given_tagidx_sqidx(1, 0);
+  is($test_gr, "1231231231231231231231231231231", "getGR_given_tagidx_sqidx correctly gets GR annotation for seq 1 tag 2");
 
-  $test_gr = $pp_msa->getGR_given_idx(2, 2);
-  is($test_gr, "this-is-a-test-of-GR-annotation", "getGR_given_idx correctly gets GR annotation for seq 3 tag 3");
+  $test_gr = $pp_msa->getGR_given_tagidx_sqidx(2, 2);
+  is($test_gr, "this-is-a-test-of-GR-annotation", "getGR_given_tagidx_sqidx correctly gets GR annotation for seq 3 tag 3");
 }
