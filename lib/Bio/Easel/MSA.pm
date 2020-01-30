@@ -3240,7 +3240,6 @@ sub get_ppstr_avg {
   my ( $caller, $ppstr ) = @_;
 
   my $pplen = length($ppstr);
-  print("ppstr: $ppstr\n");
   my @pp_A = split("", $ppstr);
   my $ppavg = 0.; # sum, then average, of all posterior probability values
   my $ppct  = 0;  # number of nongap posterior probability values
