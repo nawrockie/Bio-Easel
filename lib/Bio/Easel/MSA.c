@@ -131,12 +131,14 @@ void _c_read_msa (char *infile, char *reqdFormat, int digitize, int is_rna, int 
  * Incept:    EPN, Sat Feb  2 14:23:28 2013
  * Synopsis:  Open an output file, write an msa, and close the file.
  *            If the outfile string is STDOUT than output the alignment
- *            to stdout, not to a file.
+ *            to stdout, not to a file. 
+ *            If <do_append_if_exists> is '1' then append to file 
+ *            <outfile> if it exists, else create it.
  * Returns:   eslOK on success; eslEINVAL if format is invalid;
  *            eslEINVAL if format invalid
  *            eslFAIL if unable to open file for writing.
  */
-int _c_write_msa (ESL_MSA *msa, char *outfile, char *format) 
+int _c_write_msa (ESL_MSA *msa, char *outfile, char *format, int do_append_if_exists) 
 {
   FILE  *ofp;      /* open output alignment file */
   int   fmt;       /* alignment output format */       
@@ -147,8 +149,15 @@ int _c_write_msa (ESL_MSA *msa, char *outfile, char *format)
     ofp = stdout;
   }
   else { 
-    if((ofp  = fopen(outfile, "w"))  == NULL) { 
-      return eslFAIL;
+    if(do_append_if_exists) { 
+      if((ofp  = fopen(outfile, "a+"))  == NULL) {  /* a+: append if it exists, else create it */
+        return eslFAIL;
+      }
+    }
+    else { 
+      if((ofp  = fopen(outfile, "w"))  == NULL) { 
+        return eslFAIL;
+      }
     }
   }
   if((fmt = esl_msafile_EncodeFormat(format)) == eslMSAFILE_UNKNOWN) { 
@@ -169,11 +178,13 @@ int _c_write_msa (ESL_MSA *msa, char *outfile, char *format)
  *            FASTA, and close the file.
  *            If the outfile string is STDOUT than output the alignment
  *            to stdout, not to a file.
+ *            If <do_append_if_exists> is '1' then append to file 
+ *            <outfile> if it exists, else create it.
  * Returns:   eslOK on success; 
  *            eslFAIL if unable to open file for writing.
  *            eslEMEM if out of memory
  */
-int _c_write_msa_unaligned_fasta (ESL_MSA *msa, char *outfile)
+int _c_write_msa_unaligned_fasta (ESL_MSA *msa, char *outfile, int do_append_if_exists) 
 {
   FILE   *ofp; /* open output alignment file */
   ESL_SQ *sq = NULL;
@@ -186,8 +197,15 @@ int _c_write_msa_unaligned_fasta (ESL_MSA *msa, char *outfile)
     ofp = stdout;
   }
   else { 
-    if((ofp  = fopen(outfile, "w"))  == NULL) { 
-      return eslFAIL;
+    if(do_append_if_exists) { 
+      if((ofp  = fopen(outfile, "a+"))  == NULL) {  /* a+: append if it exists, else create it */
+        return eslFAIL;
+      }
+    }
+    else { 
+      if((ofp  = fopen(outfile, "w"))  == NULL) { 
+        return eslFAIL;
+      }
     }
   }
 
@@ -208,12 +226,14 @@ int _c_write_msa_unaligned_fasta (ESL_MSA *msa, char *outfile)
  * Incept:    EPN, Mon Nov  4 09:57:43 2013
  * Synopsis:  Open an output file, and write a single unaligned sequence to it, in
  *            FASTA format, then close the file.
+ *            If <do_append_if_exists> is '1' then append to file 
+ *            <outfile> if it exists, else create it.
  * Returns:   eslOK on success; 
  *            eslFAIL if unable to open file for writing.
  *            eslEINVAL if idx is out of bounds < 0 || >= msa->nseq
  *            eslEMEM if out of memory
  */
-int _c_write_single_unaligned_seq(ESL_MSA *msa, int idx, char *outfile)
+int _c_write_single_unaligned_seq(ESL_MSA *msa, int idx, char *outfile, int do_append_if_exists)
 {
   FILE   *ofp; /* open output alignment file */
   ESL_SQ *sq = NULL;
@@ -225,9 +245,17 @@ int _c_write_single_unaligned_seq(ESL_MSA *msa, int idx, char *outfile)
   status = esl_sq_FetchFromMSA(msa, idx, &sq);
   if(status != eslOK) return status;
 
-  if((ofp  = fopen(outfile, "w"))  == NULL) { 
-    return eslFAIL;
+  if(do_append_if_exists) { 
+    if((ofp  = fopen(outfile, "a+"))  == NULL) {  /* a+: append if it exists, else create it */
+      return eslFAIL;
+    }
   }
+  else { 
+    if((ofp = fopen(outfile, "w"))  == NULL) { 
+      return eslFAIL;
+    }
+  }
+
   esl_sqio_Write(ofp, sq, eslSQFILE_FASTA, FALSE);
   esl_sq_Destroy(sq); /* note: this is inefficient, FetchFromMSA allocates a new seq each time */
   fclose(ofp);

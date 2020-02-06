@@ -858,20 +858,24 @@ sub set_name {
   Args     : $outfile: name of output file, if "STDOUT" output to stdout, not to a file
            : $format:  ('stockholm', 'pfam', 'a2m', 'phylip', 'phylips', 'psiblast', 'selex', 'afa', 'clustal', 'clustallike', 'fasta')
            :           if 'fasta', write out seqs in unaligned fasta.
+           : $do_append_if_exists: if $outfile exists, append to it, else create it
   Returns  : void
 
 =cut
 
 sub write_msa {
-  my ( $self, $outfile, $format ) = @_;
+  my ( $self, $outfile, $format, $do_append_if_exists ) = @_;
 
   my $status;
+
+  if(! defined $do_append_if_exists) { $do_append_if_exists = 0; }
+
   $self->_check_msa();
   if ( !defined $format ) {
     $format = "stockholm";
   }
   if ($format eq "fasta") { # special case, write as unaligned fasta
-    $status = _c_write_msa_unaligned_fasta( $self->{esl_msa}, $outfile );
+    $status = _c_write_msa_unaligned_fasta( $self->{esl_msa}, $outfile, $do_append_if_exists );
   }
   elsif (    $format eq "stockholm"
           || $format eq "pfam"
@@ -884,7 +888,7 @@ sub write_msa {
           || $format eq "clustal"
           || $format eq "clustallike")
   {
-    $status = _c_write_msa( $self->{esl_msa}, $outfile, $format );
+    $status = _c_write_msa( $self->{esl_msa}, $outfile, $format, $do_append_if_exists );
   }
   else { 
     croak "format must be \"stockholm\" or \"pfam\" or \"afa\" or \"clustal\" or \"fasta\"";
@@ -894,7 +898,7 @@ sub write_msa {
       croak "problem writing out msa, invalid format $format";
     }
     elsif ( $status == $ESLFAIL ) {
-      croak "problem writing out msa, unable to open output file $outfile for writing";
+      croak "problem writing out msa, unable to open $outfile for writing or appending"; 
     }
     elsif ( $status == $ESLEMEM ) {
       croak "problem writing out msa, out of memory";
@@ -913,23 +917,26 @@ sub write_msa {
   Function : Writes out a single seq from MSA in FASTA format to a file.
   Args     : $idx:     index of seq in MSA to output
            : $outfile: name of file to create
+           : $do_append_if_exists: if $outfile exists, append to it, else create it
   Returns  : void
 
 =cut
 
 sub write_single_unaligned_seq { 
-  my ($self, $idx, $outfile) = @_;
+  my ($self, $idx, $outfile, $do_append_if_exists) = @_;
 
   my $status;
 
+  if(! defined $do_append_if_exists) { $do_append_if_exists = 0; }
+
   $self->_check_msa();
-  $status = _c_write_single_unaligned_seq( $self->{esl_msa}, $idx, $outfile );
+  $status = _c_write_single_unaligned_seq( $self->{esl_msa}, $idx, $outfile, $do_append_if_exists);
   if($status != $ESLOK) { 
     if   ($status == $ESLEINVAL) { 
       croak "problem writing out single seq idx $idx, idx out of bounds";
     }
     elsif($status == $ESLFAIL) { 
-      croak "problem writing out single seq idx $idx, unable to open $outfile for writing"; 
+      croak "problem writing out single seq idx $idx, unable to open $outfile for writing or appending"; 
     }
     elsif ( $status == $ESLEMEM ) {
       croak "problem writing out msa, out of memory";
