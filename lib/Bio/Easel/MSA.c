@@ -131,12 +131,14 @@ void _c_read_msa (char *infile, char *reqdFormat, int digitize, int is_rna, int 
  * Incept:    EPN, Sat Feb  2 14:23:28 2013
  * Synopsis:  Open an output file, write an msa, and close the file.
  *            If the outfile string is STDOUT than output the alignment
- *            to stdout, not to a file.
+ *            to stdout, not to a file. 
+ *            If <do_append_if_exists> is '1' then append to file 
+ *            <outfile> if it exists, else create it.
  * Returns:   eslOK on success; eslEINVAL if format is invalid;
  *            eslEINVAL if format invalid
  *            eslFAIL if unable to open file for writing.
  */
-int _c_write_msa (ESL_MSA *msa, char *outfile, char *format) 
+int _c_write_msa (ESL_MSA *msa, char *outfile, char *format, int do_append_if_exists) 
 {
   FILE  *ofp;      /* open output alignment file */
   int   fmt;       /* alignment output format */       
@@ -147,8 +149,15 @@ int _c_write_msa (ESL_MSA *msa, char *outfile, char *format)
     ofp = stdout;
   }
   else { 
-    if((ofp  = fopen(outfile, "w"))  == NULL) { 
-      return eslFAIL;
+    if(do_append_if_exists) { 
+      if((ofp  = fopen(outfile, "a+"))  == NULL) {  /* a+: append if it exists, else create it */
+        return eslFAIL;
+      }
+    }
+    else { 
+      if((ofp  = fopen(outfile, "w"))  == NULL) { 
+        return eslFAIL;
+      }
     }
   }
   if((fmt = esl_msafile_EncodeFormat(format)) == eslMSAFILE_UNKNOWN) { 
@@ -169,11 +178,13 @@ int _c_write_msa (ESL_MSA *msa, char *outfile, char *format)
  *            FASTA, and close the file.
  *            If the outfile string is STDOUT than output the alignment
  *            to stdout, not to a file.
+ *            If <do_append_if_exists> is '1' then append to file 
+ *            <outfile> if it exists, else create it.
  * Returns:   eslOK on success; 
  *            eslFAIL if unable to open file for writing.
  *            eslEMEM if out of memory
  */
-int _c_write_msa_unaligned_fasta (ESL_MSA *msa, char *outfile)
+int _c_write_msa_unaligned_fasta (ESL_MSA *msa, char *outfile, int do_append_if_exists) 
 {
   FILE   *ofp; /* open output alignment file */
   ESL_SQ *sq = NULL;
@@ -186,8 +197,15 @@ int _c_write_msa_unaligned_fasta (ESL_MSA *msa, char *outfile)
     ofp = stdout;
   }
   else { 
-    if((ofp  = fopen(outfile, "w"))  == NULL) { 
-      return eslFAIL;
+    if(do_append_if_exists) { 
+      if((ofp  = fopen(outfile, "a+"))  == NULL) {  /* a+: append if it exists, else create it */
+        return eslFAIL;
+      }
+    }
+    else { 
+      if((ofp  = fopen(outfile, "w"))  == NULL) { 
+        return eslFAIL;
+      }
     }
   }
 
@@ -208,12 +226,14 @@ int _c_write_msa_unaligned_fasta (ESL_MSA *msa, char *outfile)
  * Incept:    EPN, Mon Nov  4 09:57:43 2013
  * Synopsis:  Open an output file, and write a single unaligned sequence to it, in
  *            FASTA format, then close the file.
+ *            If <do_append_if_exists> is '1' then append to file 
+ *            <outfile> if it exists, else create it.
  * Returns:   eslOK on success; 
  *            eslFAIL if unable to open file for writing.
  *            eslEINVAL if idx is out of bounds < 0 || >= msa->nseq
  *            eslEMEM if out of memory
  */
-int _c_write_single_unaligned_seq(ESL_MSA *msa, int idx, char *outfile)
+int _c_write_single_unaligned_seq(ESL_MSA *msa, int idx, char *outfile, int do_append_if_exists)
 {
   FILE   *ofp; /* open output alignment file */
   ESL_SQ *sq = NULL;
@@ -225,9 +245,17 @@ int _c_write_single_unaligned_seq(ESL_MSA *msa, int idx, char *outfile)
   status = esl_sq_FetchFromMSA(msa, idx, &sq);
   if(status != eslOK) return status;
 
-  if((ofp  = fopen(outfile, "w"))  == NULL) { 
-    return eslFAIL;
+  if(do_append_if_exists) { 
+    if((ofp  = fopen(outfile, "a+"))  == NULL) {  /* a+: append if it exists, else create it */
+      return eslFAIL;
+    }
   }
+  else { 
+    if((ofp = fopen(outfile, "w"))  == NULL) { 
+      return eslFAIL;
+    }
+  }
+
   esl_sqio_Write(ofp, sq, eslSQFILE_FASTA, FALSE);
   esl_sq_Destroy(sq); /* note: this is inefficient, FetchFromMSA allocates a new seq each time */
   fclose(ofp);
@@ -914,6 +942,18 @@ int _c_addGC(ESL_MSA *msa, char *tag, char *value)
   return status;
 }
 
+/* Function:  _c_addGR()
+ * Incept:    EPN, Wed Jan 29 11:11:18 2020
+ * Purpose:   Add GR annotation to MSA.
+ * Returns:   eslOK on success, ! eslOK on failure.
+ */
+int _c_addGR(ESL_MSA *msa, char *tag, int sqidx, char *value)
+{
+  int    status;
+  status = esl_msa_AppendGR(msa, tag, sqidx, value);
+  return status;
+}
+
 /* Function:  _c_addGS()
  * Incept:    EPN, Sat Feb  2 14:48:47 2013
  * Purpose:   Add GS annotation to a sequence in a MSA.
@@ -1031,6 +1071,100 @@ int _c_hasGC (ESL_MSA *msa, char *tag)
   }   
 }
 
+/* Function:  _c_hasGR_given_tag_sqidx
+ * Incept:    EPN, Wed Jan 29 11:32:42 2020
+ * Synopsis:  Returns '1' if a msa has GR annotation for sequence <sqidx>
+ *            with the tag <tag>,
+ *            else returns '0'.
+ */
+int _c_hasGR_given_tag_sqidx (ESL_MSA *msa, char *tag, int sqidx)
+{
+  int status;
+  int tagidx;
+  
+  if(strcmp(tag, "SS") == 0) return ((msa->ss == NULL) || (msa->ss[sqidx] == NULL)) ? 0 : 1;
+  if(strcmp(tag, "SA") == 0) return ((msa->sa == NULL) || (msa->sa[sqidx] == NULL)) ? 0 : 1;
+  if(strcmp(tag, "PP") == 0) return ((msa->pp == NULL) || (msa->pp[sqidx] == NULL)) ? 0 : 1;
+  
+  /* not a parsed tag, search for it */
+  /* get tagidx for this GR tag */
+  if(msa->ngr > 0) { 
+    status = esl_keyhash_Lookup(msa->gr_idx, tag, -1, &tagidx);
+    if(status == eslOK) { 
+      // tag exists, but is it valid for this sequence? 
+      return (msa->gr[tagidx][sqidx] == NULL) ? 0 : 1;
+    }
+    else { 
+      return 0;
+    }
+  }
+  else { 
+    return 0;
+  }
+}
+
+/* Function:  _c_hasGR_any_sqidx_given_tag
+ * Incept:    EPN, Wed Jan 29 11:32:42 2020
+ * Synopsis:  Returns '1' if a msa has GR annotation for any sequence
+ *            with the tag <tag>,
+ *            else returns '0'.
+ */
+int _c_hasGR_any_sqidx_given_tag (ESL_MSA *msa, char *tag)
+{
+  int status;
+  int tagidx;
+  
+  if(strcmp(tag, "SS") == 0) return (msa->ss == NULL) ? 0 : 1;
+  if(strcmp(tag, "SA") == 0) return (msa->sa == NULL) ? 0 : 1;
+  if(strcmp(tag, "PP") == 0) return (msa->pp == NULL) ? 0 : 1;
+  
+  /* not a parsed tag, search for it */
+  /* get tagidx for this GR tag */
+  if(msa->ngr > 0) { 
+    status = esl_keyhash_Lookup(msa->gr_idx, tag, -1, &tagidx);
+    if(status == eslOK) { 
+      return 1; 
+    }
+    else { 
+      return 0;
+    }
+  }
+  else { 
+     return 0;
+  }
+}
+
+/* Function:  _c_hasGR_given_tagidx_sqidx
+ * Incept:    EPN, Wed Jan 29 12:23:23 2020
+ * Synopsis:  Returns '1' if a msa has GR annotation for sequence <sqidx>
+ *            with the tag idx <tagidx>,
+ *            else returns '0'.
+ */
+int _c_hasGR_given_tagidx_sqidx (ESL_MSA *msa, int tagidx, int sqidx)
+{
+  int status;
+  
+  if(msa->gr == NULL)                { return 0; }
+  if(msa->gr[tagidx] == NULL)        { return 0; }
+  if(msa->gr[tagidx][sqidx] == NULL) { return 0; }
+  return 1;
+}
+
+/* Function:  _c_hasGR_any_sqidx_given_tagidx
+ * Incept:    EPN, Wed Jan 29 12:46:03 2020
+ * Synopsis:  Returns '1' if a msa has GR annotation for any sequence
+ *            with the tag idx <tagidx>,
+ *            else returns '0'.
+ */
+int _c_hasGR_any_sqidx_given_tagidx (ESL_MSA *msa, int tagidx)
+{
+  int status;
+  
+  if(msa->gr == NULL)                { return 0; }
+  if(msa->gr[tagidx] == NULL)        { return 0; }
+  return 1;
+}
+
 /* Function:  _c_getGC_given_tag
  * Incept:    EPN, Fri May 24 09:58:32 2013
  * Synopsis:  Returns the GC annotation pertaining to tag <tag>.
@@ -1051,10 +1185,35 @@ char *_c_getGC_given_tag (ESL_MSA *msa, char *tag)
   if(strcmp(tag, "MM")      == 0) return msa->mm;
 
   /* not a parsed tag, search for it */
-  /* get tagidx for this GC tag. existing tag: <ngc; new: == ngc. */
+  /* get tagidx for this GC tag */
   status = esl_keyhash_Lookup(msa->gc_idx, tag, -1, &tagidx);
-  if (status != eslOK) croak("_c_getGC unexpected error, tag %s seems to exist but it does not", tag);
+  if (status != eslOK) croak("_c_getGC_given_tag unexpected error, tag %s seems to exist but it does not", tag);
   return msa->gc[tagidx];
+}
+
+/* Function:  _c_getGR_given_tag_sqidx
+ * Incept:    EPN, Wed Jan 29 11:58:36 2020
+ * Synopsis:  Returns the GR annotation pertaining to tag <tag>
+ *            for seq <sqidx>
+ * Returns:   the GC annotation with tag <tag> as a string
+ */
+char *_c_getGR_given_tag_sqidx (ESL_MSA *msa, char *tag, int sqidx)
+{
+  int status;
+  int tagidx;
+
+  if(! (_c_hasGR_given_tag_sqidx(msa, tag, sqidx))) croak("_c_getGR, no such annotation exists");
+  /* we've already verified it exists with the _c_hasGR_given_tag_sqidx call, hence
+   * the lack of checks for NULL below */
+  if(strcmp(tag, "SS") == 0) return msa->ss[sqidx];
+  if(strcmp(tag, "SA") == 0) return msa->sa[sqidx];
+  if(strcmp(tag, "PP") == 0) return msa->pp[sqidx];
+
+  /* not a parsed tag, search for it */
+  /* get tagidx for this GR tag */
+  status = esl_keyhash_Lookup(msa->gr_idx, tag, -1, &tagidx);
+  if (status != eslOK) croak("_c_getGR_given_tag unexpected error, tag %s seems to exist but it does not", tag);
+  return msa->gr[tagidx][sqidx];
 }
 
 /* Function:  _c_getGC_given_idx
@@ -1068,6 +1227,19 @@ char *_c_getGC_given_idx (ESL_MSA *msa, int tagidx)
   return msa->gc[tagidx];
 }
 
+/* Function:  _c_getGR_given_tagidx_sqidx
+ * Incept:    EPN, Wed Jan 29 12:20:55 2020
+ * Synopsis:  Returns the GR annotation of idx <tagidx> for seq <sqidx>.
+ * Returns:   the GC annotation of idx <tagidx> for seq <sqidx>
+ */
+char *_c_getGR_given_tagidx_sqidx (ESL_MSA *msa, int tagidx, int sqidx)
+{
+  if(tagidx >= msa->ngr)             { croak("_c_getGR_given_tagidx_sqidx, no such tagidx exists"); }
+  if(msa->gr[tagidx] == NULL)        { croak("_c_getGR_given_tagidx_sqidx, tagidx is null"); }
+  if(msa->gr[tagidx][sqidx] == NULL) { croak("_c_getGR_given_tagidx_sqidx, GR annotation for tagidx and seqidx is null"); }
+  return msa->gr[tagidx][sqidx];
+}
+
 /* Function:  _c_getGC_number
  * Incept:    EPN, Wed Feb  4 17:40:34 2015
  * Synopsis:  Return number of GC tag annotations in msa (msa->ngc).
@@ -1076,6 +1248,16 @@ char *_c_getGC_given_idx (ESL_MSA *msa, int tagidx)
 int _c_getGC_number (ESL_MSA *msa)
 {
   return msa->ngc;
+}
+
+/* Function:  _c_getGR_number
+ * Incept:    EPN, Wed Jan 29 12:20:30 2020
+ * Synopsis:  Return number of GR tag annotations in msa (msa->ngr).
+ * Returns:   msa->ngr
+ */
+int _c_getGR_number (ESL_MSA *msa)
+{
+  return msa->ngr;
 }
 
 /* Function:  _c_getGC_tag
@@ -1088,6 +1270,19 @@ char *_c_getGC_tag (ESL_MSA *msa, int tagidx)
 {
   if(tagidx >= msa->ngc) croak("_c_getGC_tag, no such tagidx exists");
   return(msa->gc_tag[tagidx]);
+}
+
+
+/* Function:  _c_getGR_tag
+ * Incept:    EPN, Wed Jan 29 12:29:06 2020
+ * Synopsis:  Return tag number <idx> of GR annotation, or die if it
+ *            doesn't exist.
+ * Returns:   msa->gr_tag[idx];
+ */
+char *_c_getGR_tag (ESL_MSA *msa, int tagidx)
+{
+  if(tagidx >= msa->ngr) croak("_c_getGR_tag, no such tagidx exists");
+  return(msa->gr_tag[tagidx]);
 }
 
 /* Function:  _c_getGC_tagidx
@@ -1107,6 +1302,26 @@ int _c_getGC_tagidx (ESL_MSA *msa, char *tag)
   }
   
   croak("_c_getGC_tagidx, no such tag exists");
+  return -1; /* never reached */
+}   
+
+/* Function:  _c_getGR_tagidx
+ * Incept:    EPN, Wed Jan 29 12:30:44 2020
+ * Synopsis:  Return tag idx of GR annotation with tag <tag>
+ * Returns:   idx of GR annotation with tag <tag>
+ * Dies:      if the idx does not exist
+ */
+int _c_getGR_tagidx (ESL_MSA *msa, char *tag)
+{
+  int status;
+  int tagidx;
+
+  if(msa->ngr > 0) { 
+    status = esl_keyhash_Lookup(msa->gr_idx, tag, -1, &tagidx);
+    if(status == eslOK) return tagidx;
+  }
+  
+  croak("_c_getGR_tagidx, no such tag exists");
   return -1; /* never reached */
 }   
 

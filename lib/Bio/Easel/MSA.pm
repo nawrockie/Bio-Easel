@@ -181,7 +181,7 @@ sub new {
 
   Title    : msa
   Incept   : EPN, Tue Jan 29 09:06:30 2013
-  Usage    : Bio::Easel::MSA->msa()
+  Usage    : $msaObject->msa()
   Function : Accessor for msa: sets (if nec) and returns MSA.
   Args     : none
   Returns  : msa   
@@ -203,7 +203,7 @@ sub msa {
 
   Title    : path
   Incept   : EPN, Tue Jan 30 15:42:30 2013
-  Usage    : Bio::Easel::MSA->path()
+  Usage    : $msaObject->path()
   Function : Accessor for path, read only.
   Args     : none
   Returns  : string containing path to the SEED or undef.   
@@ -264,7 +264,7 @@ sub is_digitized {
 
   Title    : read_msa
   Incept   : EPN, Mon Jan 28 09:26:24 2013
-  Usage    : Bio::Easel::MSA->read_msa($fileLocation)
+  Usage    : $msaObject->read_msa($fileLocation)
   Function : Opens $fileLocation, reads first MSA, sets it.
   Args     : <fileLocation>: file location of alignment, required unless $self->{path} already set
            : <reqdFormat>:   optional, required format of alignment file
@@ -858,20 +858,24 @@ sub set_name {
   Args     : $outfile: name of output file, if "STDOUT" output to stdout, not to a file
            : $format:  ('stockholm', 'pfam', 'a2m', 'phylip', 'phylips', 'psiblast', 'selex', 'afa', 'clustal', 'clustallike', 'fasta')
            :           if 'fasta', write out seqs in unaligned fasta.
+           : $do_append_if_exists: if $outfile exists, append to it, else create it
   Returns  : void
 
 =cut
 
 sub write_msa {
-  my ( $self, $outfile, $format ) = @_;
+  my ( $self, $outfile, $format, $do_append_if_exists ) = @_;
 
   my $status;
+
+  if(! defined $do_append_if_exists) { $do_append_if_exists = 0; }
+
   $self->_check_msa();
   if ( !defined $format ) {
     $format = "stockholm";
   }
   if ($format eq "fasta") { # special case, write as unaligned fasta
-    $status = _c_write_msa_unaligned_fasta( $self->{esl_msa}, $outfile );
+    $status = _c_write_msa_unaligned_fasta( $self->{esl_msa}, $outfile, $do_append_if_exists );
   }
   elsif (    $format eq "stockholm"
           || $format eq "pfam"
@@ -884,7 +888,7 @@ sub write_msa {
           || $format eq "clustal"
           || $format eq "clustallike")
   {
-    $status = _c_write_msa( $self->{esl_msa}, $outfile, $format );
+    $status = _c_write_msa( $self->{esl_msa}, $outfile, $format, $do_append_if_exists );
   }
   else { 
     croak "format must be \"stockholm\" or \"pfam\" or \"afa\" or \"clustal\" or \"fasta\"";
@@ -894,7 +898,7 @@ sub write_msa {
       croak "problem writing out msa, invalid format $format";
     }
     elsif ( $status == $ESLFAIL ) {
-      croak "problem writing out msa, unable to open output file $outfile for writing";
+      croak "problem writing out msa, unable to open $outfile for writing or appending"; 
     }
     elsif ( $status == $ESLEMEM ) {
       croak "problem writing out msa, out of memory";
@@ -913,23 +917,26 @@ sub write_msa {
   Function : Writes out a single seq from MSA in FASTA format to a file.
   Args     : $idx:     index of seq in MSA to output
            : $outfile: name of file to create
+           : $do_append_if_exists: if $outfile exists, append to it, else create it
   Returns  : void
 
 =cut
 
 sub write_single_unaligned_seq { 
-  my ($self, $idx, $outfile) = @_;
+  my ($self, $idx, $outfile, $do_append_if_exists) = @_;
 
   my $status;
 
+  if(! defined $do_append_if_exists) { $do_append_if_exists = 0; }
+
   $self->_check_msa();
-  $status = _c_write_single_unaligned_seq( $self->{esl_msa}, $idx, $outfile );
+  $status = _c_write_single_unaligned_seq( $self->{esl_msa}, $idx, $outfile, $do_append_if_exists);
   if($status != $ESLOK) { 
     if   ($status == $ESLEINVAL) { 
       croak "problem writing out single seq idx $idx, idx out of bounds";
     }
     elsif($status == $ESLFAIL) { 
-      croak "problem writing out single seq idx $idx, unable to open $outfile for writing"; 
+      croak "problem writing out single seq idx $idx, unable to open $outfile for writing or appending"; 
     }
     elsif ( $status == $ESLEMEM ) {
       croak "problem writing out msa, out of memory";
@@ -944,7 +951,7 @@ sub write_single_unaligned_seq {
 
   Title    : any_allgap_columns
   Incept   : EPN, Mon Jan 28 10:44:12 2013
-  Usage    : Bio::Easel::MSA->any_allgap_columns()
+  Usage    : $msaObject->any_allgap_columns()
   Function : Return TRUE if any all gap columns exist in MSA
   Args     : none
   Returns  : TRUE if any all gap columns, FALSE if not
@@ -1591,6 +1598,250 @@ sub getGC_tagidx {
 }
 
 #-------------------------------------------------------------------------------
+
+=head2 addGR
+
+  Title    : addGR
+  Incept   : EPN, Wed Jan 29 11:13:04 2020
+  Usage    : $msaObject->addGR($tag, $seqidx, $annAR)
+  Function : Add GR annotation to an ESL_MSA for sequence
+           : <$sqidx> with tag <$tag> and column annotation
+           : in the array referenced by <$annAR>
+  Args     : $tag:    name of GC annotation (e.g. SS_cons)
+           : $sqidx:  seq index to add GR for [0..nseq-1]
+           : $annstr: string that is the per-residue annotation
+           :          must be same length as alignment length.
+  Returns  : void
+
+=cut
+
+sub addGR {
+  my ( $self, $tag, $sqidx, $annstr ) = @_;
+
+  # contract checks
+  if((! defined $annstr) || (length($annstr) != $self->alen)) { croak "ERROR: unable to add GR annotation because it is empty or the wrong length"; }
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  # add it
+  my $status = _c_addGR( $self->{esl_msa}, $tag, $sqidx, $annstr);
+  if ( $status != $ESLOK ) { croak "ERROR: unable to add GR annotation"; }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_given_tag_sqidx
+
+  Title    : getGR_given_tag_sqidx
+  Incept   : EPN, Wed Jan 29 11:47:34 2020
+  Usage    : $msaObject->getGR_given_tag_sqidx($tag, $sqidx)
+  Function : Return GR annotation named <tag> of an ESL_MSA
+           : for sequence <$sqidx> as a string.
+  Args     : $tag:    name of GR annotation
+           : $sqidx:  sequence index [0..nseq-1]
+  Returns  : $annstr: GR annotation, as a string.
+
+=cut
+
+sub getGR_given_tag_sqidx {
+  my ( $self, $tag, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  if(! (_c_hasGR_given_tag_sqidx( $self->{esl_msa}, $tag, $sqidx ))) { croak("trying to get GR annotation $tag for seq $sqidx that does not exist"); }
+  return _c_getGR_given_tag_sqidx( $self->{esl_msa}, $tag, $sqidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_given_tagidx_sqidx
+
+  Title    : getGR_given_tagidx_sqidx
+  Incept   : EPN, Wed Jan 29 12:16:41 2020
+  Usage    : $msaObject->getGR_given_tagidx_sqidx($tagidx, $sqidx)
+  Function : Return GR annotation of idx <tagidx> of an ESL_MSA
+           : for sequence <$sqidx> as a string.
+  Args     : $tagidx: idx of GR annotation
+           : $sqidx:  sequence index [0..nseq-1]
+  Returns  : $annstr: GR annotation, as a string.
+
+=cut
+
+sub getGR_given_tagidx_sqidx {
+  my ( $self, $tagidx, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  if($tagidx >= $self->getGR_number) { croak("trying to get GR annotation for tag idx $tagidx that does not exist"); }
+  if(_c_hasGR_given_tagidx_sqidx( $self->{esl_msa}, $tagidx, $sqidx )) { 
+    return _c_getGR_given_tagidx_sqidx( $self->{esl_msa}, $tagidx, $sqidx );
+  }
+  else { 
+    croak("trying to get GR annotation for tag idx $tagidx for seq $sqidx, tag exists but not for this seq"); 
+  }
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 hasGR_given_tag_sqidx
+
+  Title    : hasGR_given_tag_sqidx
+  Incept   : EPN, Wed Jan 29 11:29:32 2020
+  Usage    : $msaObject->hasGR_given_tag_sqidx($tag, $sqidx)
+  Function : Return '1' if GR annotation named <tag> exists
+           : for sequence index $sqidx (0..$nseq-1),
+           : else return '0'.
+  Args     : $tag:   name of unparsed GR annotation
+           : $sqidx: seq index we are interested in
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGR_given_tag_sqidx {
+  my ( $self, $tag, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+  return _c_hasGR_given_tag_sqidx( $self->{esl_msa}, $tag, $sqidx );
+}
+#-------------------------------------------------------------------------------
+
+=head2 hasGR_given_tagidx_sqidx
+
+  Title    : hasGR_given_tagidx_sqidx
+  Incept   : EPN, Wed Jan 29 12:22:16 2020
+  Usage    : $msaObject->hasGR_given_tagidx_sqidx($tagidx, $sqidx)
+  Function : Return '1' if GR annotation with tag idx <tagidx> exists
+           : for sequence index $sqidx (0..$nseq-1),
+           : else return '0'.
+  Args     : $tagidx: index of tag (not including SS, SA, PP)
+           : $sqidx:  seq index we are interested in
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGR_given_tagidx_sqidx {
+  my ( $self, $tagidx, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+  return _c_hasGR_given_tagidx_sqidx( $self->{esl_msa}, $tagidx, $sqidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 hasGR_any_sqidx_given_tag
+
+  Title    : hasGR_any_sqidx_given_tag
+  Incept   : EPN, Wed Jan 29 12:44:00 2020
+  Usage    : $msaObject->hasGR_given_tag_any_seqidx($tag)
+  Function : Return '1' if GR annotation named <tag> exists
+           : for any sequence index
+           : else return '0'.
+  Args     : $tag:   name of unparsed GR annotation
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGR_any_sqidx_given_tag {
+  my ( $self, $tag ) = @_;
+
+  $self->_check_msa();
+  return _c_hasGR_any_sqidx_given_tag( $self->{esl_msa}, $tag);
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 hasGR_any_sqidx_given_tagidx
+
+  Title    : hasGR_any_sqidx_given_tagidx
+  Incept   : EPN, Wed Jan 29 12:46:50 2020
+  Usage    : $msaObject->hasGR_any_sqidx_given_tagidx($tagidx)
+  Function : Return '1' if GR annotation with tag idx <tagidx> exists
+           : else return '0'.
+  Args     : $tagidx: index of tag (not including SS, SA, PP)
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGR_any_sqidx_given_tagidx {
+  my ( $self, $tagidx, $sqidx ) = @_;
+
+  $self->_check_msa();
+  return _c_hasGR_any_sqidx_given_tagidx( $self->{esl_msa}, $tagidx);
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_number
+
+  Title    : getGR_number
+  Incept   : EPN, Wed Jan 29 12:19:28 2020
+  Usage    : $msaObject->getGR_number()
+  Function : Return number of GR annotations available.
+  Args     : none
+  Returns  : number of GR annotations stored in MSA
+             (not including SS, SA, and PP, 
+               which are stored in a special way
+              (not in msa->gr))
+
+=cut
+
+sub getGR_number {
+  my ( $self, $tag ) = @_;
+
+  $self->_check_msa();
+  return (_c_getGR_number( $self->{esl_msa}));
+}
+
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_tag
+
+  Title    : getGR_tag
+  Incept   : EPN, Wed Jan 29 12:28:39 2020
+  Usage    : $msaObject->getGR_tag($tagidx)
+  Function : Return GR tag of idx <tagidx> as a string
+  Args     : $tagidx: idx of tag you want
+  Returns  : $tag: string
+
+=cut
+
+sub getGR_tag {
+  my ( $self, $tagidx ) = @_;
+
+  $self->_check_msa();
+  if($tagidx >= $self->getGR_number) { croak("trying to get GR tag idx $tagidx that does not exist"); }
+  return _c_getGR_tag( $self->{esl_msa}, $tagidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGR_tagidx
+
+  Title    : getGR_tagidx
+  Incept   : EPN, Wed Jan 29 12:29:44 2020
+  Usage    : $msaObject->getGR_tagidx($tag)
+  Function : Return the idx of GR annotation with tag <tag>.
+  Args     : $tag: tag of annotation you want idx of
+  Returns  : $tagidx: idx of GR annotation
+  Dies     : if annotation with tag $tag does not exist.
+=cut
+
+sub getGR_tagidx {
+  my ( $self, $tag ) = @_;
+
+  $self->_check_msa();
+  if(! $self->hasGR_any_sqidx_given_tag($tag)) { croak("trying to get idx of tag $tag that does not exist"); }
+  return _c_getGR_tagidx( $self->{esl_msa}, $tag );
+}
+
+#-------------------------------------------------------------------------------
+
 
 =head2 weight_GSC
 
@@ -2972,25 +3223,48 @@ sub get_pp_avg {
   my $full_ppstring = _c_get_ppstring_aligned( $self->{esl_msa}, $idx );
   my $pplen    = $epos-$spos+1;
   my $ppstring = substr($full_ppstring, $spos-1, $pplen);
-  my @pp_A = split("", $ppstring);
+  
+  my ($ppavg, $ppct) = return Bio::Easel::MSA->get_ppstr_avg($ppstring);
+}
 
+#-------------------------------------------------------------------------------
+
+=head2 get_ppstr_avg
+
+  Title    : get_ppstr_avg
+  Incept   : EPN, Wed Jan 29 09:45:37 2020
+  Usage    : Bio::Easel::MSA::get_ppstr_avg($ppstr)
+  Function : Return the average posterior probability of a posterior probability
+           : string, potentially with gaps.
+  Args     : <ppstr>:  string of posterior probability values, possible with gaps (.)
+  Returns  : two values:
+           :   1) average aligned posterior probability annotation for sequence index idx from aligned positions spos..epos
+           :   2) number of nongap positions for sequence index idx from aligned positions spos..epos
+
+=cut
+
+sub get_ppstr_avg { 
+  my ( $caller, $ppstr ) = @_;
+
+  my $pplen = length($ppstr);
+  my @pp_A = split("", $ppstr);
   my $ppavg = 0.; # sum, then average, of all posterior probability values
   my $ppct  = 0;  # number of nongap posterior probability values
   for(my $ppidx = 0; $ppidx < $pplen; $ppidx++) { 
     my $ppval = $pp_A[$ppidx];
     if   ($ppval eq ".") { ; } # do nothing 
-    elsif($ppval eq "*") { $ppavg += 0.975; $ppct++; } # do nothing 
-    elsif($ppval eq "9") { $ppavg += 0.9;   $ppct++; } # do nothing 
-    elsif($ppval eq "8") { $ppavg += 0.8;   $ppct++; } # do nothing 
-    elsif($ppval eq "7") { $ppavg += 0.7;   $ppct++; } # do nothing 
-    elsif($ppval eq "6") { $ppavg += 0.6;   $ppct++; } # do nothing 
-    elsif($ppval eq "5") { $ppavg += 0.5;   $ppct++; } # do nothing 
-    elsif($ppval eq "4") { $ppavg += 0.4;   $ppct++; } # do nothing 
-    elsif($ppval eq "3") { $ppavg += 0.3;   $ppct++; } # do nothing 
-    elsif($ppval eq "2") { $ppavg += 0.2;   $ppct++; } # do nothing 
-    elsif($ppval eq "1") { $ppavg += 0.1;   $ppct++; } # do nothing 
-    elsif($ppval eq "0") { $ppavg += 0.025; $ppct++; } # do nothing 
-    else { croak "ERROR in get_pp_avg(), unexpected PP value of $ppval"; }
+    elsif($ppval eq "*") { $ppavg += 0.975; $ppct++; }
+    elsif($ppval eq "9") { $ppavg += 0.9;   $ppct++; }
+    elsif($ppval eq "8") { $ppavg += 0.8;   $ppct++; }
+    elsif($ppval eq "7") { $ppavg += 0.7;   $ppct++; }
+    elsif($ppval eq "6") { $ppavg += 0.6;   $ppct++; }
+    elsif($ppval eq "5") { $ppavg += 0.5;   $ppct++; }
+    elsif($ppval eq "4") { $ppavg += 0.4;   $ppct++; }
+    elsif($ppval eq "3") { $ppavg += 0.3;   $ppct++; }
+    elsif($ppval eq "2") { $ppavg += 0.2;   $ppct++; }
+    elsif($ppval eq "1") { $ppavg += 0.1;   $ppct++; }
+    elsif($ppval eq "0") { $ppavg += 0.025; $ppct++; }
+    else { croak "ERROR in get_ppstr_avg(), unexpected PP value of $ppval"; }
   }
   if($ppct > 0) { 
     $ppavg /= $ppct; 
@@ -3031,7 +3305,7 @@ sub DESTROY {
 
   Title    : _check_msa
   Incept   : EPN, Sat Feb  2 13:42:27 2013
-  Usage    : Bio::Easel::MSA->_check_msa()
+  Usage    : $msaObject->_check_msa()
   Function : Reads msa only if it is currently undefined
   Args     : none
   Returns  : void
@@ -3067,7 +3341,7 @@ sub _check_sqidx {
   $self->_check_msa();
   my $nseq = $self->nseq;
   if ( $idx < 0 || $idx >= $nseq ) {
-    croak (sprintf("invalid sequence index %d (must be [0..%d])", $idx, $nseq));
+    croak (sprintf("invalid sequence index %d (must be [0..%d])", $idx, $nseq-1));
   }
   return;
 }

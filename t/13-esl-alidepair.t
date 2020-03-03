@@ -25,7 +25,7 @@ $diff = diff("$datadir/exp.out1.df.stk", "out1.df.stk", "out1.df.stk.diff");
 is($diff, "", "esl-alidepair $in_file depaired correctly (1) with default parameters");
 $diff = diff("$datadir/exp.out1.df.stdout", "out1.df.stdout", "out1.df.stdout.diff");
 is($diff, "", "esl-alidepair $in_file depaired correctly (2) with default parameters");
-push(@unlinkA, ("out1.df.stk", "out1.df.stdout"));
+push(@unlinkA, ("out1.df.stk", "out1.df.stdout", "out1.df.stk.diff", "out1.df.stdout.diff"));
 
 # test -w
 run_command("$scriptdir/esl-alidepair.pl -w $in_file out1.w.stk > out1.w.stdout");
@@ -33,7 +33,7 @@ $diff = diff("$datadir/exp.out1.w.stk", "out1.w.stk", "out1.w.stk.diff");
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
 $diff = diff("$datadir/exp.out1.w.stdout", "out1.w.stdout", "out1.w.stdout.diff");
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
-push(@unlinkA, ("out1.w.stk", "out1.w.stdout"));
+push(@unlinkA, ("out1.w.stk", "out1.w.stdout", "out1.w.stk.diff", "out1.w.stdout.diff"));
 
 # test --nc 0.5
 run_command("$scriptdir/esl-alidepair.pl --nc 0.5 $in_file out1.nc0p5.stk > out1.nc0p5.stdout");
@@ -41,7 +41,7 @@ $diff = diff("$datadir/exp.out1.nc0p5.stk", "out1.nc0p5.stk", "out1.nc0p5.stk.di
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
 $diff = diff("$datadir/exp.out1.nc0p5.stdout", "out1.nc0p5.stdout", "out1.nc0p5.stdout.diff");
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
-push(@unlinkA, ("out1.nc0p5.stk", "out1.nc0p5.stdout"));
+push(@unlinkA, ("out1.nc0p5.stk", "out1.nc0p5.stdout", "out1.nc0p5.stk.diff", "out1.nc0p5.stdout.diff"));
 
 # test --nc 0.8
 run_command("$scriptdir/esl-alidepair.pl --nc 0.8 $in_file out1.nc0p8.stk > out1.nc0p8.stdout");
@@ -49,7 +49,7 @@ $diff = diff("$datadir/exp.out1.nc0p8.stk", "out1.nc0p8.stk", "out1.nc0p8.stk.di
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
 $diff = diff("$datadir/exp.out1.nc0p8.stdout", "out1.nc0p8.stdout", "out1.nc0p8.stdout.diff");
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
-push(@unlinkA, ("out1.nc0p8.stk", "out1.nc0p8.stdout"));
+push(@unlinkA, ("out1.nc0p8.stk", "out1.nc0p8.stdout", "out1.nc0p8.stk.diff", "out1.nc0p8.stdout.diff"));
 
 # test -w --nc 0.5
 run_command("$scriptdir/esl-alidepair.pl -w --nc 0.5 $in_file out1.nc0p5.w.stk > out1.nc0p5.w.stdout");
@@ -57,7 +57,7 @@ $diff = diff("$datadir/exp.out1.nc0p5.w.stk", "out1.nc0p5.w.stk", "out1.nc0p5.w.
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
 $diff = diff("$datadir/exp.out1.nc0p5.w.stdout", "out1.nc0p5.w.stdout", "out1.nc0p5.w.stdout.diff");
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
-push(@unlinkA, ("out1.nc0p5.w.stk", "out1.nc0p5.w.stdout"));
+push(@unlinkA, ("out1.nc0p5.w.stk", "out1.nc0p5.w.stdout", "out1.nc0p5.w.stk.diff", "out1.nc0p5.w.stdout.diff"));
 
 # test --dg 0.5
 run_command("$scriptdir/esl-alidepair.pl --dg 0.5 $in_file out1.dg0p5.stk > out1.dg0p5.stdout");
@@ -65,7 +65,7 @@ $diff = diff("$datadir/exp.out1.dg0p5.stk", "out1.dg0p5.stk", "out1.dg0p5.stk.di
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
 $diff = diff("$datadir/exp.out1.dg0p5.stdout", "out1.dg0p5.stdout", "out1.dg0p5.stdout.diff");
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
-push(@unlinkA, ("out1.dg0p5.stk", "out1.dg0p5.stdout"));
+push(@unlinkA, ("out1.dg0p5.stk", "out1.dg0p5.stdout", "out1.dg0p5.stk.diff", "out1.dg0p5.stdout.diff"));
 
 # test -w --dg 0.5
 run_command("$scriptdir/esl-alidepair.pl -w --dg 0.5 $in_file out1.dg0p5.w.stk > out1.dg0p5.w.stdout");
@@ -73,7 +73,7 @@ $diff = diff("$datadir/exp.out1.dg0p5.w.stk", "out1.dg0p5.w.stk", "out1.dg0p5.w.
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (1) with default parameters");
 $diff = diff("$datadir/exp.out1.dg0p5.w.stdout", "out1.dg0p5.w.stdout", "out1.dg0p5.w.stdout.diff");
 is($diff, "", "esl-alidepair -w $in_file depaired correctly (2) with default parameters");
-push(@unlinkA, ("out1.dg0p5.w.stk", "out1.dg0p5.w.stdout"));
+push(@unlinkA, ("out1.dg0p5.w.stk", "out1.dg0p5.w.stdout", "out1.dg0p5.w.stk.diff", "out1.dg0p5.w.stdout.diff"));
 
 clean_up(\@unlinkA);
 
@@ -119,8 +119,6 @@ sub diff {
     $diff_output .= $line;
   }
   close(IN);
-
-  clean_up(\@unlinkA);
   
   return $diff_output;
 }

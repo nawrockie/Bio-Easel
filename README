@@ -1,7 +1,7 @@
 Bio-Easel
 
-version 0.11
-December 2019
+version 0.12
+March 2020
 
 The README is used to introduce the module and provide instructions on
 how to install the module, any machine dependencies it may have (for
@@ -15,13 +15,19 @@ INSTALLATION
 This module requires the Easel C library, which needs to 
 be downloaded from GitHub. Before you can do that you will 
 need to create a 'src' directory. 
+
         mkdir src 
         cd src
-        curl -k -L -o easel-Bio-Easel-0.11.zip https://github.com/EddyRivasLab/easel/archive/Bio-Easel-0.11.zip
-        unzip easel-Bio-Easel-0.11.zip
-        mv easel-Bio-Easel-0.11 easel
-        rm easel-Bio-Easel-0.11.zip
+        curl -k -L -o easel-Bio-Easel-0.12.zip https://github.com/EddyRivasLab/easel/archive/Bio-Easel-0.12.zip
+        unzip easel-Bio-Easel-0.12.zip
+        mv easel-Bio-Easel-0.12 easel
+        rm easel-Bio-Easel-0.12.zip
         cd ..
+
+It also requires the Inline module which can be installed with:
+
+        cpan install Inline
+        cpan install Inline::C
 
 Then, to install this module, run the following commands from the 
 top level Bio-Easel directory:
@@ -41,4 +47,3 @@ perldoc command.
 LICENSE AND COPYRIGHT
 
 See LICENSE file for LICENSE and COPYRIGHT information
-
