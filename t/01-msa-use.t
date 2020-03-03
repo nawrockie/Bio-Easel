@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 257;
+use Test::More tests => 287;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -20,7 +20,7 @@ my $gap_alnfile   = "./t/data/test-gap.sto";
 my $pp_alnfile    = "./t/data/test-pp.sto";
 my ($msa1, $msa2);
 my ($path, $nseq, $sqname, $sqidx, $any_gaps, $len, $avglen, $outfile, $id, $checksum, $format, $is_digitized);
-my ($line, $line1, $line2, $mode, $msa_str, $trash);
+my ($line, $line1, $line2, $line1a, $line2a, $i, $mode, $msa_str, $trash);
 my ($sub_nseq, $sub_alen, $isres, $alen);
 my ($avg_pid, $min_pid, $min_idx, $max_pid, $max_idx);
 my @keepmeA;
@@ -187,6 +187,25 @@ for($mode = 0; $mode <= 1; $mode++) {
   close(IN);
   is($line1, ">human\n", "write_msa() output fasta (mode $mode)");
   is($line2, "AAGACUUCGGAUCUGGCGACACCC\n", "write_msa() output fasta (mode $mode)");
+
+  # test again, in append-mode
+  $msa1->write_msa($outfile, "fasta", 1); # 1: append if file exists
+  open(IN, $outfile);
+  $line1 = <IN>;
+  $line2 = <IN>;
+  # chew up next 2 lines (other seqs)
+  $trash = <IN>;
+  $trash = <IN>;
+  $trash = <IN>;
+  $trash = <IN>;
+  $line1a = <IN>;
+  $line2a = <IN>;
+  close(IN);
+  is($line1, ">human\n", "write_msa() output fasta, append (mode $mode)");
+  is($line2, "AAGACUUCGGAUCUGGCGACACCC\n", "write_msa() output fasta (mode $mode)");
+  is($line1a, ">human\n", "write_msa() output fasta, append (mode $mode)");
+  is($line2a, "AAGACUUCGGAUCUGGCGACACCC\n", "write_msa() output fasta, append (mode $mode)");
+
   unlink $outfile;
 
   # test write_single_unaligned_seq
@@ -198,6 +217,20 @@ for($mode = 0; $mode <= 1; $mode++) {
   close(IN);
   is($line1, ">human\n", "write_single_unaligned_seq() output fasta (mode $mode)");
   is($line2, "AAGACUUCGGAUCUGGCGACACCC\n", "write_single_unaligned_seq() output correctly (mode $mode)");
+
+  # test again, in append-mode
+  $msa1->write_single_unaligned_seq(0, $outfile, 1); # 1: append if file exists
+  open(IN, $outfile);
+  $line1 = <IN>;
+  $line2 = <IN>;
+  $line1a = <IN>;
+  $line2a = <IN>;
+  close(IN);
+  is($line1, ">human\n", "write_single_unaligned_seq() output fasta, append (mode $mode)");
+  is($line2, "AAGACUUCGGAUCUGGCGACACCC\n", "write_single_unaligned_seq() output correctly, append (mode $mode)");
+  is($line1a, ">human\n", "write_single_unaligned_seq() output fasta, append (mode $mode)");
+  is($line2a, "AAGACUUCGGAUCUGGCGACACCC\n", "write_single_unaligned_seq() output correctly, append (mode $mode)");
+
   unlink $outfile;
 
   #######################################################
@@ -275,6 +308,16 @@ for($mode = 0; $mode <= 1; $mode++) {
   else { 
     is($line1, "orc          AGCU-CCGCgCcU\n", "column_subset worked (mode $mode)");
   }
+
+  # test appending the msa
+  $msa1->write_msa($outfile, "stockholm", 1); # 1: append if file exists
+  # determine number of alignments by grep'ing for STOCKHOLM header and //
+  my $nstockholms = `grep "^\# STOCKHOLM 1.0" $outfile | wc -l`; 
+  chomp $nstockholms;
+  my $nends = `grep "^\/\/" $outfile | wc -l`; 
+  chomp $nends;
+  is($nstockholms, "2", "write_msa appending seems to work (mode: $mode)");
+  is($nends, "2", "write_msa appending seems to work (mode: $mode)");
   unlink $outfile;
 
   # test remove_rf_gap_columns
@@ -686,3 +729,37 @@ for($mode = 0; $mode <= 1; $mode++) {
   if(defined $msa1) { undef $msa1; }
 }
   
+################################################
+# get_ppstr_avg
+my $ppstr1 = "99**887755..33..001";
+my $ppstr2 = ".99**887755..33..001..";
+my $ppstr3 = "99**887755..33..001..";
+my $ppstr4 = "...99**887.755..33..001";
+my $ppstr5 = "99**88775533001";
+
+my ($ppavg, $ppct);
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr1);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr2);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr3);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr4);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+
+($ppavg, $ppct) = Bio::Easel::MSA->get_ppstr_avg($ppstr5);
+$ppavg = int(($ppavg * 100) + 0.5);
+is($ppavg, 57, "get_ppstr_avg seems to be working.");
+is($ppct,  15, "get_ppstr_avg seems to be working.");
+
