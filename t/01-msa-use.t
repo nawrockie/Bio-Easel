@@ -315,6 +315,9 @@ for($mode = 0; $mode <= 1; $mode++) {
   my $nstockholms = `grep "^\# STOCKHOLM 1.0" $outfile | wc -l`; 
   chomp $nstockholms;
   my $nends = `grep "^\/\/" $outfile | wc -l`; 
+  # remove whitespace at beginning of $nstockholms and $nends
+  $nstockholms =~ s/^\s+//;
+  $nends =~ s/^\s+//;
   chomp $nends;
   is($nstockholms, "2", "write_msa appending seems to work (mode: $mode)");
   is($nends, "2", "write_msa appending seems to work (mode: $mode)");
