@@ -1142,8 +1142,6 @@ int _c_hasGR_any_sqidx_given_tag (ESL_MSA *msa, char *tag)
  */
 int _c_hasGR_given_tagidx_sqidx (ESL_MSA *msa, int tagidx, int sqidx)
 {
-  int status;
-  
   if(msa->gr == NULL)                { return 0; }
   if(msa->gr[tagidx] == NULL)        { return 0; }
   if(msa->gr[tagidx][sqidx] == NULL) { return 0; }
@@ -1158,8 +1156,6 @@ int _c_hasGR_given_tagidx_sqidx (ESL_MSA *msa, int tagidx, int sqidx)
  */
 int _c_hasGR_any_sqidx_given_tagidx (ESL_MSA *msa, int tagidx)
 {
-  int status;
-  
   if(msa->gr == NULL)                { return 0; }
   if(msa->gr[tagidx] == NULL)        { return 0; }
   return 1;
