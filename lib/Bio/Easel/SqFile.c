@@ -272,7 +272,7 @@ void _c_fetch_one_subsequence(ESL_SQFILE *sqfp, char *sqname, char *newname, lon
   if (esl_sqio_FetchSubseq(sqfp, sqname, start, end, sq) != eslOK) croak("Failed to fetch subseq: %s", esl_sqfile_GetErrorBuf(sqfp));
 
   if      (newname != NULL) esl_sq_SetName(sq, newname);
-  else                      esl_sq_FormatName(sq, "%s/%ld-%ld", sqname, given_start, (given_end == 0) ? sq->L : given_end);
+  else                      esl_sq_FormatName(sq, "%s/%lld-%lld", sqname, given_start, (given_end == 0) ? (long) sq->L : given_end);
 
   /* possibly reverse complement the subseq we just fetched */
   if (do_revcomp) { 
