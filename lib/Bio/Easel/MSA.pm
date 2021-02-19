@@ -1020,31 +1020,6 @@ sub get_sqstring_aligned {
 
 #-------------------------------------------------------------------------------
 
-=head2 set_sqstring_aligned
-
-  Title    : set_sqstring_aligned
-  Incept   : EPN, Fri Feb 19 06:39:54 2021
-  Usage    : $msaObject->set_sqstring_aligned()
-  Function : Given an aligned text string, set an aseq or ax 
-             in an MSA to it, overwriting existing aseq or ax.
-  Args     : sqstring: the sequence string
-           : idx:      sequence index to set
-  Returns  : void
-
-=cut
-
-sub set_sqstring_aligned {
-  my ( $self, $sqstring, $idx ) = @_;
-
-  $self->_check_msa();
-  $self->_check_sqidx($idx);
-  _c_set_sqstring_aligned( $self->{esl_msa}, $sqstring, $idx );
-
-  return;
-}
-
-#-------------------------------------------------------------------------------
-
 =head2 swap_gap_and_closest_residue
 
   Title    : swap_gap_and_closest_residue
@@ -1141,7 +1116,8 @@ sub swap_gap_and_closest_residue {
 
   if(defined $ppstring) { 
     $save_char = $ppstring_A[($gap_apos-1)];
-    $ppstring_A[($gap_apos-1)] = $ppstring_A[($res_apos-1)];
+    # $ppstring_A[($gap_apos-1)] = $ppstring_A[($res_apos-1)];
+    $ppstring_A[($gap_apos-1)] = "0"; # set new PP to 0 
     $ppstring_A[($res_apos-1)] = $save_char;
     $ppstring = join("", @ppstring_A);
     _c_set_existing_ppstring_aligned($self->{esl_msa}, $ppstring, $seqidx);
@@ -1224,93 +1200,6 @@ sub get_ppstring_aligned {
   return _c_get_ppstring_aligned( $self->{esl_msa}, $idx );
 }
 
-#-------------------------------------------------------------------------------
-
-=head2 set_existing_ppstring_aligned
-
-  Title    : set_existing_ppstring_aligned
-  Incept   : EPN, Fri Feb 19 09:34:48 2021
-  Usage    : $msaObject->set_existing_ppstring_aligned()
-  Function : Given an aligned PP string, overwrite an already
-             existing ppstring in an MSA to it.
-  Args     : ppstring:    the PP string
-           : idx:         sequence index to set PP for
-           : do_validate: validate pp string before setting it
-  Returns  : void
-
-=cut
-
-sub set_existing_ppstring_aligned {
-  my ( $self, $ppstring, $idx, $do_validate ) = @_;
-
-  $self->_check_msa();
-  $self->_check_sqidx($idx);
-  $self->_check_ppidx($idx);
-
-  if($do_validate) { 
-    $self->validate_ppstring_aligned($ppstring, $idx);
-    # validate_ppstring_aligned() will die if ppstring is invalid
-  }
-
-  _c_set_existing_ppstring_aligned( $self->{esl_msa}, $ppstring, $idx );
-
-  return;
-}
-
-#-------------------------------------------------------------------------------
-
-=head2 validate_ppstring_aligned
-
-  Title    : validate_ppstring_aligned
-  Incept   : EPN, Fri Feb 19 12:00:06 2021
-  Usage    : $msaObject->validate_ppstring_aligned()
-  Function : Given an aligned PP string, check if it is valid
-             by making sure all non-gap characters are valid
-             [0-9*] and correspond to non-gap characters in 
-             the corresponding sequence and vice versa.             
-  Args     : ppstring: the PP string
-           : idx:      sequence index to set PP for
-  Returns  : 1
-
-=cut
-
-sub validate_ppstring_aligned {
-  my ( $self, $ppstring, $idx ) = @_;
-
-  $self->_check_msa();
-  $self->_check_sqidx($idx);
-  $self->_check_ppidx($idx);
-
-  my $seq_gapstr = ".-~";
-  
-  my $sqstring = $self->get_sqstring_aligned($idx);
-  my @sq_A = split("", $sqstring);
-  my @pp_A = split("", $ppstring);
-  my $sqlen = scalar(@sq_A);
-  my $pplen = scalar(@pp_A);
-  if($sqlen != $pplen) { 
-    croak "ERROR: in set_existing_ppstring_aligned(), unexpected ppstring len $pplen, expected $sqlen";
-  }
-  my $sq_is_gap;
-  my $pp_is_gap;
-  for(my $i = 0; $i < $sqlen; $i++) { 
-    if($pp_A[$i] !~ m/[0-9*]/) { 
-      croak sprintf("ERROR in set_existing_ppstring_aligned, PP position %d is invalid (%s), expected [0-9*]", ($i+1), $pp_A[$i]); 
-    }      
-    $sq_is_gap = ($sq_A[$i] =~ m/[\.\-\~]/) ? 1 : 0;
-    $pp_is_gap = ($pp_A[$i] eq ".") ? 1 : 0;
-    if(($sq_is_gap) && (! $pp_is_gap)) { 
-      my $croak_str = sprintf("ERROR in set_existing_ppstring_aligned, PP position %d is not a gap (%s), but seq position %d is a gap (%s)", ($i+1), $pp_A[$i], ($i+1), $sq_A[$i]); 
-      croak $croak_str;
-    }
-    if((! $sq_is_gap) && ($pp_is_gap)) { 
-      my $croak_str = sprintf("ERROR in set_existing_ppstring_aligned, PP position %d is a gap (%s), but seq position %d is not a gap (%s)", ($i+1), $pp_A[$i], ($i+1), $sq_A[$i]); 
-      croak $croak_str;
-    }
-  }
-  
-  return 1;
-}
 
 #-------------------------------------------------------------------------------
 
