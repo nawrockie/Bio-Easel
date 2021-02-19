@@ -1038,7 +1038,130 @@ sub set_sqstring_aligned {
 
   $self->_check_msa();
   $self->_check_sqidx($idx);
-  return _c_set_sqstring_aligned( $self->{esl_msa}, $sqstring, $idx );
+  _c_set_sqstring_aligned( $self->{esl_msa}, $sqstring, $idx );
+
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 swap_gap_and_closest_residue
+
+  Title    : swap_gap_and_closest_residue
+  Incept   : EPN, Fri Feb 19 06:39:54 2021
+  Usage    : $msaObject->swap_gap_and_closest_residue()
+  Function : For a specific sequence, swap a gap in the alignment
+             with the nearest residue before or after it.
+             Also relocates ss,sa annotation for the relocated residue, if it exists
+             Changes pp annotation for the relocated residue to 0, if it exists
+             
+  Args     : seqidx:    sequence index we are swapping residue in
+             gap_apos:  aligned position of the gap [1..alen]
+             do_before: '1' to swap with first residue before gap,
+                        '0' to swap with first residue after gap
+  Returns  : "" upon success
+             non-empty string with error message upon failure.
+             Fails if $gap_apos for sequence $seqidx is not a gap
+             Fails if $do_before and no residues exist before gap
+             Fails if $do_after  and no residues exist after  gap
+  Dies     : If there's a problem getting or setting sqstring or annotation strings
+=cut
+
+sub swap_gap_and_closest_residue { 
+  my ( $self, $seqidx, $gap_apos, $do_before ) = @_;
+
+  my $sub_name = "swap_gap_and_closest_residue()";
+  $self->_check_msa();
+  $self->_check_sqidx($seqidx);
+
+  # contract checks
+  my $alen = $self->alen;
+  if(($gap_apos < 0) || ($gap_apos > $alen)) { 
+    return "ERROR: invalid gap alignment position gap_apos > alen ($gap_apos > $alen)";
+  }
+
+  my $sqstring = _c_get_sqstring_aligned($self->{esl_msa}, $seqidx);
+  my @sqstring_A = split("", $sqstring);
+
+  # get annotation strings, if any
+  my $ppstring = undef;
+  my @ppstring_A = ();
+  my $sastring = undef;
+  my @sastring_A = ();
+  my $ssstring = undef;
+  my @ssstring_A = ();
+  if(_c_check_ppidx($self->{esl_msa}, $seqidx)) { 
+    $ppstring = _c_get_ppstring_aligned($self->{esl_msa}, $seqidx);
+    my @ppstring_A = split("", $ppstring);
+  }    
+  if(_c_check_saidx($self->{esl_msa}, $seqidx)) { 
+    $sastring = _c_get_sastring_aligned($self->{esl_msa}, $seqidx);
+    my @sastring_A = split("", $sastring);
+  }    
+  if(_c_check_ssidx($self->{esl_msa}, $seqidx)) { 
+    $ssstring = _c_get_ssstring_aligned($self->{esl_msa}, $seqidx);
+    my @ssstring_A = split("", $ssstring);
+  }    
+
+  if($sqstring_A[($gap_apos-1)] !~ m/[\-\.\~]/) { 
+    return sprintf("ERROR in $sub_name: aligned position $gap_apos for sequence $seqidx is not a gap but %s", $sqstring_A[($gap_apos-1)]);
+  }
+  my $res_apos; # aligned position of residue to swap with gap at $gap_apos
+  my $apos;
+  if($do_before) { 
+    for($apos = ($gap_apos-1); $apos >= 1; $apos--) { 
+      if($sqstring_A[($apos-1)] !~ m/[\-\.\~]/) { 
+        $res_apos = $apos;
+        $apos = 0; # breaks loop
+      }
+      if(! defined $res_apos) { 
+        return "ERROR in $sub_name: no residues, only gaps exist before gap at alignment position $gap_apos";
+      }
+    }
+  }
+  else { # ! $do_before, so do_after
+    for($apos = ($gap_apos+1); $apos <= $alen; $apos++) { 
+      if($sqstring_A[($apos-1)] !~ m/[\-\.\~]/) { 
+        $res_apos = $apos;
+        $apos = $alen+1; # breaks loop
+      }
+      if(! defined $res_apos) { 
+        return "ERROR in $sub_name: no residues, only gaps exist after gap at alignment position $gap_apos";
+      }
+    }
+  }
+
+  # do the swap and set the strings in the MSA
+  my $save_char;
+  $save_char = $sqstring_A[($gap_apos-1)];
+  $sqstring_A[($gap_apos-1)] = $sqstring_A[($res_apos-1)];
+  $sqstring_A[($res_apos-1)] = $save_char;
+  $sqstring = join("", @sqstring_A);
+  _c_set_sqstring_aligned($self->{esl_msa}, $sqstring, $seqidx);
+
+  if(defined $ppstring) { 
+    $save_char = $ppstring_A[($gap_apos-1)];
+    $ppstring_A[($gap_apos-1)] = $ppstring_A[($res_apos-1)];
+    $ppstring_A[($res_apos-1)] = $save_char;
+    $ppstring = join("", @ppstring_A);
+    _c_set_existing_ppstring_aligned($self->{esl_msa}, $ppstring, $seqidx);
+  }
+  if(defined $sastring) { 
+    $save_char = $sastring_A[($gap_apos-1)];
+    $sastring_A[($gap_apos-1)] = $sastring_A[($res_apos-1)];
+    $sastring_A[($res_apos-1)] = $save_char;
+    $sastring = join("", @sastring_A);
+    _c_set_existing_sastring_aligned($self->{esl_msa}, $sastring, $seqidx);
+  }
+  if(defined $ssstring) { 
+    $save_char = $ssstring_A[($gap_apos-1)];
+    $ssstring_A[($gap_apos-1)] = $ssstring_A[($res_apos-1)];
+    $ssstring_A[($res_apos-1)] = $save_char;
+    $ssstring = join("", @ssstring_A);
+    _c_set_existing_ssstring_aligned($self->{esl_msa}, $ssstring, $seqidx);
+  }
+
+  return "";
 }
 
 #-------------------------------------------------------------------------------
@@ -1099,6 +1222,94 @@ sub get_ppstring_aligned {
   $self->_check_sqidx($idx);
   $self->_check_ppidx($idx);
   return _c_get_ppstring_aligned( $self->{esl_msa}, $idx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 set_existing_ppstring_aligned
+
+  Title    : set_existing_ppstring_aligned
+  Incept   : EPN, Fri Feb 19 09:34:48 2021
+  Usage    : $msaObject->set_existing_ppstring_aligned()
+  Function : Given an aligned PP string, overwrite an already
+             existing ppstring in an MSA to it.
+  Args     : ppstring:    the PP string
+           : idx:         sequence index to set PP for
+           : do_validate: validate pp string before setting it
+  Returns  : void
+
+=cut
+
+sub set_existing_ppstring_aligned {
+  my ( $self, $ppstring, $idx, $do_validate ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($idx);
+  $self->_check_ppidx($idx);
+
+  if($do_validate) { 
+    $self->validate_ppstring_aligned($ppstring, $idx);
+    # validate_ppstring_aligned() will die if ppstring is invalid
+  }
+
+  _c_set_existing_ppstring_aligned( $self->{esl_msa}, $ppstring, $idx );
+
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 validate_ppstring_aligned
+
+  Title    : validate_ppstring_aligned
+  Incept   : EPN, Fri Feb 19 12:00:06 2021
+  Usage    : $msaObject->validate_ppstring_aligned()
+  Function : Given an aligned PP string, check if it is valid
+             by making sure all non-gap characters are valid
+             [0-9*] and correspond to non-gap characters in 
+             the corresponding sequence and vice versa.             
+  Args     : ppstring: the PP string
+           : idx:      sequence index to set PP for
+  Returns  : 1
+
+=cut
+
+sub validate_ppstring_aligned {
+  my ( $self, $ppstring, $idx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($idx);
+  $self->_check_ppidx($idx);
+
+  my $seq_gapstr = ".-~";
+  
+  my $sqstring = $self->get_sqstring_aligned($idx);
+  my @sq_A = split("", $sqstring);
+  my @pp_A = split("", $ppstring);
+  my $sqlen = scalar(@sq_A);
+  my $pplen = scalar(@pp_A);
+  if($sqlen != $pplen) { 
+    croak "ERROR: in set_existing_ppstring_aligned(), unexpected ppstring len $pplen, expected $sqlen";
+  }
+  my $sq_is_gap;
+  my $pp_is_gap;
+  for(my $i = 0; $i < $sqlen; $i++) { 
+    if($pp_A[$i] !~ m/[0-9*]/) { 
+      croak sprintf("ERROR in set_existing_ppstring_aligned, PP position %d is invalid (%s), expected [0-9*]", ($i+1), $pp_A[$i]); 
+    }      
+    $sq_is_gap = ($sq_A[$i] =~ m/[\.\-\~]/) ? 1 : 0;
+    $pp_is_gap = ($pp_A[$i] eq ".") ? 1 : 0;
+    if(($sq_is_gap) && (! $pp_is_gap)) { 
+      my $croak_str = sprintf("ERROR in set_existing_ppstring_aligned, PP position %d is not a gap (%s), but seq position %d is a gap (%s)", ($i+1), $pp_A[$i], ($i+1), $sq_A[$i]); 
+      croak $croak_str;
+    }
+    if((! $sq_is_gap) && ($pp_is_gap)) { 
+      my $croak_str = sprintf("ERROR in set_existing_ppstring_aligned, PP position %d is a gap (%s), but seq position %d is not a gap (%s)", ($i+1), $pp_A[$i], ($i+1), $sq_A[$i]); 
+      croak $croak_str;
+    }
+  }
+  
+  return 1;
 }
 
 #-------------------------------------------------------------------------------
