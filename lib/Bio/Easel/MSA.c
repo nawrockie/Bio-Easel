@@ -702,6 +702,33 @@ SV *_c_get_sqstring_aligned(ESL_MSA *msa, int seqidx)
   return NULL;
 }
 
+/* Function:  _c_set_sqstring_aligned()
+ * Incept:    EPN, Fri Feb 19 06:55:52 2021
+ * Purpose:   Set aligned sequence <seqidx> to <seqstring>.
+ * Returns:   Aligned sequence <seqidx>.
+ */
+void *_c_set_sqstring_aligned(ESL_MSA *msa, char *seqstring, int seqidx)
+{
+  int status;
+  
+  int alen = strlen(seqstring);
+  if(alen != msa->alen) croak("_c_set_sqstring_aligned() trying to set seqstring with string of incorrect length");
+
+  /* we do not free and reallocate here, going against the convention of other subroutines (e.g. _c_set_rf) */
+  if(msa->flags & eslMSA_DIGITAL) { 
+    /* do not need to free msa->ax[seqidx], we will just overwrite it */
+    if((status = esl_abc_Digitize(msa->abc, seqstring, msa->ax[seqidx])) != eslOK) croak("_c_set_sqstring_aligned() failed to set digitized aligned sequence");
+  }
+  else { /* text mode */
+    strcpy(msa->aseq[seqidx], seqstring);
+  }
+  return;
+
+ ERROR: 
+  croak("out of memory in _c_set_sqstring_aligned");
+  return;
+}
+
 /* Function:  _c_check_ppidx()
  * Incept:    EPN, Mon Jul  7 09:15:48 2014
  * Synposis:  Return '1' if sequence <idx> has PP annotation in the MSA, else return '0';

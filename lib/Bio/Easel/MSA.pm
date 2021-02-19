@@ -1020,6 +1020,29 @@ sub get_sqstring_aligned {
 
 #-------------------------------------------------------------------------------
 
+=head2 set_sqstring_aligned
+
+  Title    : set_sqstring_aligned
+  Incept   : EPN, Fri Feb 19 06:39:54 2021
+  Usage    : $msaObject->set_sqstring_aligned()
+  Function : Given an aligned text string, set an aseq or ax 
+             in an MSA to it, overwriting existing aseq or ax.
+  Args     : sqstring: the sequence string
+           : idx:      sequence index to set
+  Returns  : void
+
+=cut
+
+sub set_sqstring_aligned {
+  my ( $self, $sqstring, $idx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($idx);
+  return _c_set_sqstring_aligned( $self->{esl_msa}, $sqstring, $idx );
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 get_sqstring_aligned_and_truncated
 
   Title    : get_sqstring_aligned_and_truncated
