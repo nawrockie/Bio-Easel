@@ -31,20 +31,18 @@ for(my $mode = 0; $mode <= 1; $mode++) {
 
   my $new_human = "A.AGACUUCGGAUCUGGCG.ACA.CCC.";
   my $new_mouse = "aUACACUUCGGAUG-CACCA.AA.GUGa";
-  my $new_human_dig = $new_human;
-  my $new_mouse_dig = $new_mouse;
-  $new_human_dig =~ tr/a-z/A-Z/;
-  $new_human_dig =~ s/\./\-/g;
-  $new_mouse_dig =~ tr/a-z/A-Z/;
-  $new_mouse_dig =~ s/\./\-/g;
 
   $msa->set_sqstring_aligned($new_human, 1);
-  $msa->set_sqstring_aligned($new_mouse, 2);
-  $exp_sqstring = ($mode == 0) ? $new_human_dig : $new_human;
-  $obs_sqstring = $msa->get_sqstring_aligned(1);
-  is($obs_sqstring, $exp_sqstring, "set_sqstring_aligned set aligned seq correctly seq 1 (mode $mode)");
+  if($mode == 0) { 
+    $new_human =~ tr/a-z/A-Z/;
+    $new_human =~ s/\./\-/g;
+  }
+  is($msa->get_sqstring_aligned(1), $new_human, "set_sqstring_aligned set aligned seq correctly seq 1 (mode $mode)");
 
-  $exp_sqstring = ($mode == 0) ? $new_mouse_dig : $new_mouse;
-  $obs_sqstring = $msa->get_sqstring_aligned(2);
-  is($obs_sqstring, $exp_sqstring, "set_sqstring_aligned set aligned seq correctly seq 2 (mode $mode)");
+  $msa->set_sqstring_aligned($new_mouse, 2);
+  if($mode == 0) { 
+    $new_mouse =~ tr/a-z/A-Z/;
+    $new_mouse =~ s/\./\-/g;
+  }
+  is($msa->get_sqstring_aligned(2), $new_mouse, "set_sqstring_aligned set aligned seq correctly seq 2 (mode $mode)");
 }  
