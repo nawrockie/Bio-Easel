@@ -1034,11 +1034,15 @@ sub get_sqstring_aligned {
              gap_apos:  aligned position of the gap [1..alen]
              do_before: '1' to swap with first residue before gap,
                         '0' to swap with first residue after gap
-  Returns  : "" upon success
-             non-empty string with error message upon failure.
-             Fails if $gap_apos for sequence $seqidx is not a gap
-             Fails if $do_before and no residues exist before gap
-             Fails if $do_after  and no residues exist after  gap
+  Returns  : Two values: $ret_apos (or -1) and error message (or "")
+             If successful: 
+                return value 1: $res_apos: (integer) the position $gap_apos was switched with
+                return value 2: "", empty string indicating no error
+             If unsuccessful because either $gap_apos is not a gap for $seqidx, 
+             or   $do_before and no nongaps exist before $gap_apos
+             or ! $do_before and no nongaps exist after $gap_apos
+                return value 1: -1, did not swap, so returns -1 as $res_apos
+                return value 2: string beginning with "ERROR" explaining problem
   Dies     : If there's a problem getting or setting sqstring or annotation strings
 =cut
 
@@ -1052,7 +1056,7 @@ sub swap_gap_and_closest_residue {
   # contract checks
   my $alen = $self->alen;
   if(($gap_apos < 0) || ($gap_apos > $alen)) { 
-    return "ERROR: invalid gap alignment position gap_apos > alen ($gap_apos > $alen)";
+    return (-1, "ERROR: invalid gap alignment position gap_apos > alen ($gap_apos > $alen)");
   }
 
   my $sqstring = _c_get_sqstring_aligned($self->{esl_msa}, $seqidx);
@@ -1079,7 +1083,7 @@ sub swap_gap_and_closest_residue {
   }    
 
   if($sqstring_A[($gap_apos-1)] !~ m/[\-\.\~]/) { 
-    return sprintf("ERROR in $sub_name: aligned position $gap_apos for sequence $seqidx is not a gap but %s", $sqstring_A[($gap_apos-1)]);
+    return (-1, sprintf("ERROR in $sub_name: aligned position $gap_apos for sequence $seqidx is not a gap but %s", $sqstring_A[($gap_apos-1)]));
   }
   my $res_apos; # aligned position of residue to swap with gap at $gap_apos
   my $apos;
@@ -1091,7 +1095,7 @@ sub swap_gap_and_closest_residue {
       }
     }
     if(! defined $res_apos) { 
-      return "ERROR in $sub_name: no residues, only gaps exist before gap at alignment position $gap_apos";
+      return (-1, "ERROR in $sub_name: no residues, no nongaps exist before gap at alignment position $gap_apos");
     }
   }
   else { # ! $do_before, so do_after
@@ -1102,7 +1106,7 @@ sub swap_gap_and_closest_residue {
       }
     }
     if(! defined $res_apos) { 
-      return "ERROR in $sub_name: no residues, only gaps exist after gap at alignment position $gap_apos";
+      return (-1, "ERROR in $sub_name: no residues, no nongaps exist after gap at alignment position $gap_apos");
     }
   }
 
@@ -1137,7 +1141,7 @@ sub swap_gap_and_closest_residue {
     _c_set_existing_ssstring_aligned($self->{esl_msa}, $ssstring, $seqidx);
   }
 
-  return "";
+  return ($res_apos, "");
 }
 
 #-------------------------------------------------------------------------------
