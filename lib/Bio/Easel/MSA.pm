@@ -1020,6 +1020,132 @@ sub get_sqstring_aligned {
 
 #-------------------------------------------------------------------------------
 
+=head2 swap_gap_and_closest_residue
+
+  Title    : swap_gap_and_closest_residue
+  Incept   : EPN, Fri Feb 19 06:39:54 2021
+  Usage    : $msaObject->swap_gap_and_closest_residue()
+  Function : For a specific sequence, swap a gap in the alignment
+             with the nearest residue before or after it.
+             Also relocates ss,sa annotation for the relocated residue, if it exists
+             Changes pp annotation for the relocated residue to 0, if it exists
+             
+  Args     : seqidx:    sequence index we are swapping residue in
+             gap_apos:  aligned position of the gap [1..alen]
+             do_before: '1' to swap with first residue before gap,
+                        '0' to swap with first residue after gap
+  Returns  : Two values: $ret_apos (or -1) and error message (or "")
+             If successful: 
+                return value 1: $res_apos: (integer) the position $gap_apos was switched with
+                return value 2: "", empty string indicating no error
+             If unsuccessful because either $gap_apos is not a gap for $seqidx, 
+             or   $do_before and no nongaps exist before $gap_apos
+             or ! $do_before and no nongaps exist after $gap_apos
+                return value 1: -1, did not swap, so returns -1 as $res_apos
+                return value 2: string beginning with "ERROR" explaining problem
+  Dies     : If there's a problem getting or setting sqstring or annotation strings
+=cut
+
+sub swap_gap_and_closest_residue { 
+  my ( $self, $seqidx, $gap_apos, $do_before ) = @_;
+
+  my $sub_name = "swap_gap_and_closest_residue()";
+  $self->_check_msa();
+  $self->_check_sqidx($seqidx);
+
+  # contract checks
+  my $alen = $self->alen;
+  if(($gap_apos < 0) || ($gap_apos > $alen)) { 
+    return (-1, "ERROR: invalid gap alignment position gap_apos > alen ($gap_apos > $alen)");
+  }
+
+  my $sqstring = _c_get_sqstring_aligned($self->{esl_msa}, $seqidx);
+  my @sqstring_A = split("", $sqstring);
+
+  # get annotation strings, if any
+  my $ppstring = undef;
+  my @ppstring_A = ();
+  my $sastring = undef;
+  my @sastring_A = ();
+  my $ssstring = undef;
+  my @ssstring_A = ();
+  if(_c_check_ppidx($self->{esl_msa}, $seqidx)) { 
+    $ppstring = _c_get_ppstring_aligned($self->{esl_msa}, $seqidx);
+    @ppstring_A = split("", $ppstring);
+  }    
+  if(_c_check_saidx($self->{esl_msa}, $seqidx)) { 
+    $sastring = _c_get_sastring_aligned($self->{esl_msa}, $seqidx);
+    @sastring_A = split("", $sastring);
+  }    
+  if(_c_check_ssidx($self->{esl_msa}, $seqidx)) { 
+    $ssstring = _c_get_ssstring_aligned($self->{esl_msa}, $seqidx);
+    @ssstring_A = split("", $ssstring);
+  }    
+
+  if($sqstring_A[($gap_apos-1)] !~ m/[\-\.\~]/) { 
+    return (-1, sprintf("ERROR in $sub_name: aligned position $gap_apos for sequence $seqidx is not a gap but %s", $sqstring_A[($gap_apos-1)]));
+  }
+  my $res_apos; # aligned position of residue to swap with gap at $gap_apos
+  my $apos;
+  if($do_before) { 
+    for($apos = ($gap_apos-1); $apos >= 1; $apos--) { 
+      if($sqstring_A[($apos-1)] !~ m/[\-\.\~]/) { 
+        $res_apos = $apos;
+        $apos = 0; # breaks loop
+      }
+    }
+    if(! defined $res_apos) { 
+      return (-1, "ERROR in $sub_name: no residues, no nongaps exist before gap at alignment position $gap_apos");
+    }
+  }
+  else { # ! $do_before, so do_after
+    for($apos = ($gap_apos+1); $apos <= $alen; $apos++) { 
+      if($sqstring_A[($apos-1)] !~ m/[\-\.\~]/) { 
+        $res_apos = $apos;
+        $apos = $alen+1; # breaks loop
+      }
+    }
+    if(! defined $res_apos) { 
+      return (-1, "ERROR in $sub_name: no residues, no nongaps exist after gap at alignment position $gap_apos");
+    }
+  }
+
+  # do the swap and set the strings in the MSA
+  my $save_char;
+  $save_char = $sqstring_A[($gap_apos-1)];
+  $sqstring_A[($gap_apos-1)] = $sqstring_A[($res_apos-1)];
+  $sqstring_A[($res_apos-1)] = $save_char;
+  $sqstring = join("", @sqstring_A);
+  _c_set_sqstring_aligned($self->{esl_msa}, $sqstring, $seqidx);
+
+  if(defined $ppstring) { 
+    $save_char = $ppstring_A[($gap_apos-1)];
+    # $ppstring_A[($gap_apos-1)] = $ppstring_A[($res_apos-1)];
+    $ppstring_A[($gap_apos-1)] = "0"; # set new PP to 0 
+    $ppstring_A[($res_apos-1)] = $save_char;
+    $ppstring = join("", @ppstring_A);
+    _c_set_existing_ppstring_aligned($self->{esl_msa}, $ppstring, $seqidx);
+  }
+  if(defined $sastring) { 
+    $save_char = $sastring_A[($gap_apos-1)];
+    $sastring_A[($gap_apos-1)] = $sastring_A[($res_apos-1)];
+    $sastring_A[($res_apos-1)] = $save_char;
+    $sastring = join("", @sastring_A);
+    _c_set_existing_sastring_aligned($self->{esl_msa}, $sastring, $seqidx);
+  }
+  if(defined $ssstring) { 
+    $save_char = $ssstring_A[($gap_apos-1)];
+    $ssstring_A[($gap_apos-1)] = $ssstring_A[($res_apos-1)];
+    $ssstring_A[($res_apos-1)] = $save_char;
+    $ssstring = join("", @ssstring_A);
+    _c_set_existing_ssstring_aligned($self->{esl_msa}, $ssstring, $seqidx);
+  }
+
+  return ($res_apos, "");
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 get_sqstring_aligned_and_truncated
 
   Title    : get_sqstring_aligned_and_truncated
@@ -1077,6 +1203,52 @@ sub get_ppstring_aligned {
   $self->_check_ppidx($idx);
   return _c_get_ppstring_aligned( $self->{esl_msa}, $idx );
 }
+
+
+#-------------------------------------------------------------------------------
+
+=head2 get_sastring_aligned
+
+  Title    : get_sastring_aligned
+  Incept   : EPN, Fri Feb 19 15:09:04 2021
+  Usage    : $msaObject->get_sastring_aligned()
+  Function : Return an aligned posterior probability annotation for a seq from an MSA.
+  Args     : index of sequence you want SA annotation
+  Returns  : aligned SA annotation for sequence index idx
+
+=cut
+
+sub get_sastring_aligned {
+  my ( $self, $idx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($idx);
+  $self->_check_saidx($idx);
+  return _c_get_sastring_aligned( $self->{esl_msa}, $idx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 get_ssstring_aligned
+
+  Title    : get_ssstring_aligned
+  Incept   : EPN, Mon Jul  7 09:12:09 2014
+  Usage    : $msaObject->get_ssstring_aligned()
+  Function : Return an aligned posterior probability annotation for a seq from an MSA.
+  Args     : index of sequence you want SS annotation
+  Returns  : aligned SS annotation for sequence index idx
+
+=cut
+
+sub get_ssstring_aligned {
+  my ( $self, $idx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($idx);
+  $self->_check_ssidx($idx);
+  return _c_get_ssstring_aligned( $self->{esl_msa}, $idx );
+}
+
 
 #-------------------------------------------------------------------------------
 
@@ -3370,6 +3542,64 @@ sub _check_ppidx {
   }
   if(_c_check_ppidx($self->{esl_msa}, $idx) == 0) { 
     croak (sprintf("no PP annotation for sequence index %d", $idx));
+  }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 _check_saidx
+
+  Title    : _check_saidx
+  Incept   : EPN, Fri Feb 19 15:19:55 2021
+  Usage    : $msaObject->_check_saidx($idx)
+  Function : Check if $idx is in range 0..nseq-1,
+           : and that the MSA has SA annoation for $idx
+  Args     : $idx
+  Returns  : void
+  Dies     : via croak if no SA annotation exists for sequence $idx
+
+=cut
+
+sub _check_saidx {
+  my ( $self, $idx ) = @_;
+
+  $self->_check_msa();
+  my $nseq = $self->nseq;
+  if ( $idx < 0 || $idx >= $nseq ) {
+    croak (sprintf("invalid sequence index %d (must be [0..%d])", $idx, $nseq));
+  }
+  if(_c_check_saidx($self->{esl_msa}, $idx) == 0) { 
+    croak (sprintf("no SA annotation for sequence index %d", $idx));
+  }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 _check_ssidx
+
+  Title    : _check_ssidx
+  Incept   : EPN, Fri Feb 19 15:19:58 2021
+  Usage    : $msaObject->_check_ssidx($idx)
+  Function : Check if $idx is in range 0..nseq-1,
+           : and that the MSA has SS annoation for $idx
+  Args     : $idx
+  Returns  : void
+  Dies     : via croak if no SS annotation exists for sequence $idx
+
+=cut
+
+sub _check_ssidx {
+  my ( $self, $idx ) = @_;
+
+  $self->_check_msa();
+  my $nseq = $self->nseq;
+  if ( $idx < 0 || $idx >= $nseq ) {
+    croak (sprintf("invalid sequence index %d (must be [0..%d])", $idx, $nseq));
+  }
+  if(_c_check_ssidx($self->{esl_msa}, $idx) == 0) { 
+    croak (sprintf("no SS annotation for sequence index %d", $idx));
   }
   return;
 }

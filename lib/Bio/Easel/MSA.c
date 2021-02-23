@@ -702,6 +702,105 @@ SV *_c_get_sqstring_aligned(ESL_MSA *msa, int seqidx)
   return NULL;
 }
 
+/* Function:  _c_set_sqstring_aligned()
+ * Incept:    EPN, Fri Feb 19 06:55:52 2021
+ * Purpose:   Set aligned sequence <seqidx> to <seqstring>.
+ * Returns:   void
+ * Dies:      if len(seqstring) != alen
+ *            if msa is digitized and unable to digitize string
+ */
+void *_c_set_sqstring_aligned(ESL_MSA *msa, char *seqstring, int seqidx)
+{
+  int status;
+  
+  int alen = strlen(seqstring);
+  if(alen != msa->alen) croak("_c_set_sqstring_aligned() trying to set seqstring with string of incorrect length");
+
+  /* we do not free and reallocate here, going against the convention of other subroutines (e.g. _c_set_rf) */
+  if(msa->flags & eslMSA_DIGITAL) { 
+    /* do not need to free msa->ax[seqidx], we will just overwrite it */
+    if((status = esl_abc_Digitize(msa->abc, seqstring, msa->ax[seqidx])) != eslOK) croak("_c_set_sqstring_aligned() failed to set digitized aligned sequence");
+  }
+  else { /* text mode */
+    strcpy(msa->aseq[seqidx], seqstring);
+  }
+  return;
+
+ ERROR: 
+  croak("out of memory in _c_set_sqstring_aligned");
+  return;
+}
+
+/* Function:  _c_set_existing_ppstring_aligned()
+ * Incept:    EPN, Fri Feb 19 11:12:32 2021
+ * Purpose:   Set PP for sequence <seqidx> to <ppstring>. It must already be allocated!
+ * Returns:   void '1' on success
+ *            '0' if msa->pp == NULL or msa->pp[seqidx] == NULL (not already allocated)
+ * Dies:      if len(ppstring) != alen
+ *            if msa->pp == NULL or msa->pp[idx] == NULL
+ */
+void *_c_set_existing_ppstring_aligned(ESL_MSA *msa, char *ppstring, int idx)
+{
+  int status;
+  
+  int alen = strlen(ppstring);
+  if(alen != msa->alen) croak("_c_set_sqstring_aligned() trying to set ppstring with string of incorrect length");
+
+  if(msa->pp      == NULL) croak("_c_set_existing_ppstring_aligned() trying to set ppstring but msa->pp is NULL");
+  if(msa->pp[idx] == NULL) croak("_c_set_existing_ppstring_aligned() trying to set ppstring but msa->pp[idx] is NULL");
+  /* we do not free and reallocate here, going against the convention of other subroutines (e.g. _c_set_rf) */
+  strcpy(msa->pp[idx], ppstring);
+
+  return;
+}
+
+/* Function:  _c_set_existing_sastring_aligned()
+ * Incept:    EPN, Fri Feb 19 13:07:52 2021
+ * Purpose:   Set SA for sequence <seqidx> to <sastring>. It must already be allocated!
+ * Returns:   void '1' on success
+ *            '0' if msa->sa == NULL or msa->sa[seqidx] == NULL (not already allocated)
+ * Dies:      if len(sastring) != alen
+ *            if msa->sa == NULL or msa->sa[idx] == NULL
+ */
+void *_c_set_existing_sastring_aligned(ESL_MSA *msa, char *sastring, int idx)
+{
+  int status;
+  
+  int alen = strlen(sastring);
+  if(alen != msa->alen) croak("_c_set_sqstring_aligned() trying to set sastring with string of incorrect length");
+
+  if(msa->sa      == NULL) croak("_c_set_existing_sastring_aligned() trying to set sastring but msa->sa is NULL");
+  if(msa->sa[idx] == NULL) croak("_c_set_existing_sastring_aligned() trying to set sastring but msa->sa[idx] is NULL");
+  /* we do not free and reallocate here, going against the convention of other subroutines (e.g. _c_set_rf) */
+  strcpy(msa->sa[idx], sastring);
+
+  return;
+}
+
+/* Function:  _c_set_existing_ssstring_aligned()
+ * Incept:    EPN, Fri Feb 19 11:12:32 2021
+ * Purpose:   Set SS for sequence <seqidx> to <ssstring>. It must already be allocated!
+ * Returns:   void '1' on success
+ *            '0' if msa->ss == NULL or msa->ss[seqidx] == NULL (not already allocated)
+ * Dies:      if len(ssstring) != alen
+ *            if msa->ss == NULL or msa->ss[idx] == NULL
+ */
+void *_c_set_existing_ssstring_aligned(ESL_MSA *msa, char *ssstring, int idx)
+{
+  int status;
+  
+  int alen = strlen(ssstring);
+  if(alen != msa->alen) croak("_c_set_sqstring_aligned() trying to set ssstring with string of incorrect length");
+
+  if(msa->ss      == NULL) croak("_c_set_existing_ssstring_aligned() trying to set ssstring but msa->ss is NULL");
+  if(msa->ss[idx] == NULL) croak("_c_set_existing_ssstring_aligned() trying to set ssstring but msa->ss[idx] is NULL");
+  /* we do not free and reallocate here, going against the convention of other subroutines (e.g. _c_set_rf) */
+  strcpy(msa->ss[idx], ssstring);
+
+  return;
+}
+
+
 /* Function:  _c_check_ppidx()
  * Incept:    EPN, Mon Jul  7 09:15:48 2014
  * Synposis:  Return '1' if sequence <idx> has PP annotation in the MSA, else return '0';
@@ -711,6 +810,30 @@ int _c_check_ppidx(ESL_MSA *msa, int idx)
   if(msa->pp      == NULL)        return 0;
   if(idx < 0 || idx >= msa->nseq) return 0;
   if(msa->pp[idx] == NULL)        return 0;
+  return 1;
+}
+
+/* Function:  _c_check_saidx()
+ * Incept:    EPN, Fri Feb 19 12:39:00 2021
+ * Synposis:  Return '1' if sequence <idx> has SA annotation in the MSA, else return '0';
+ */
+int _c_check_saidx(ESL_MSA *msa, int idx)
+{
+  if(msa->sa      == NULL)        return 0;
+  if(idx < 0 || idx >= msa->nseq) return 0;
+  if(msa->sa[idx] == NULL)        return 0;
+  return 1;
+}
+
+/* Function:  _c_check_ssidx()
+ * Incept:    EPN, Mon Jul  7 09:15:48 2014
+ * Synposis:  Return '1' if sequence <idx> has SS annotation in the MSA, else return '0';
+ */
+int _c_check_ssidx(ESL_MSA *msa, int idx)
+{
+  if(msa->ss      == NULL)        return 0;
+  if(idx < 0 || idx >= msa->nseq) return 0;
+  if(msa->ss[idx] == NULL)        return 0;
   return 1;
 }
 
@@ -734,6 +857,58 @@ SV *_c_get_ppstring_aligned(ESL_MSA *msa, int seqidx)
   free(ppstring);
 
   return ppstringSV;
+
+ ERROR: 
+  croak("out of memory");
+  return NULL;
+}
+
+/* Function:  _c_get_sastring_aligned()
+ * Incept:    EPN, Fri Feb 19 12:48:47 2021
+ * Purpose:   Return aligned SA annotation for sequence <seqidx>.
+ * Returns:   SA annotation for aligned sequence <seqidx>.
+ */
+SV *_c_get_sastring_aligned(ESL_MSA *msa, int seqidx)
+{
+  int status;
+  SV *sastringSV;  /* SV version of msa->ax[->seq */
+  char *sastring;
+
+  if(_c_check_saidx(msa, seqidx) == 0) { croak("no SA annotation for sequence"); }
+
+  ESL_ALLOC(sastring, sizeof(char) * (msa->alen + 1));
+  if((status = esl_strdup(msa->sa[seqidx], msa->alen, &sastring)) != eslOK) croak("failed to duplicate text aligned posterior probability annotation");
+
+  sastringSV = newSVpv(sastring, msa->alen);
+  free(sastring);
+
+  return sastringSV;
+
+ ERROR: 
+  croak("out of memory");
+  return NULL;
+}
+
+/* Function:  _c_get_ssstring_aligned()
+ * Incept:    EPN, Fri Feb 19 12:50:27 2021
+ * Purpose:   Return aligned SS annotation for sequence <seqidx>.
+ * Returns:   SS annotation for aligned sequence <seqidx>.
+ */
+SV *_c_get_ssstring_aligned(ESL_MSA *msa, int seqidx)
+{
+  int status;
+  SV *ssstringSV;  /* SV version of msa->ax[->seq */
+  char *ssstring;
+
+  if(_c_check_ssidx(msa, seqidx) == 0) { croak("no SS annotation for sequence"); }
+
+  ESL_ALLOC(ssstring, sizeof(char) * (msa->alen + 1));
+  if((status = esl_strdup(msa->ss[seqidx], msa->alen, &ssstring)) != eslOK) croak("failed to duplicate text aligned posterior probability annotation");
+
+  ssstringSV = newSVpv(ssstring, msa->alen);
+  free(ssstring);
+
+  return ssstringSV;
 
  ERROR: 
   croak("out of memory");
