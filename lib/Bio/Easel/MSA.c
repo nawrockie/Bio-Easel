@@ -726,9 +726,6 @@ void _c_set_sqstring_aligned(ESL_MSA *msa, char *seqstring, int seqidx)
   }
   return;
 
- ERROR: 
-  croak("out of memory in _c_set_sqstring_aligned");
-  return;
 }
 
 /* Function:  _c_set_existing_ppstring_aligned()
@@ -740,8 +737,6 @@ void _c_set_sqstring_aligned(ESL_MSA *msa, char *seqstring, int seqidx)
  */
 void _c_set_existing_ppstring_aligned(ESL_MSA *msa, char *ppstring, int idx)
 {
-  int status;
-  
   int alen = strlen(ppstring);
   if(alen != msa->alen) croak("_c_set_sqstring_aligned() trying to set ppstring with string of incorrect length");
 
@@ -762,8 +757,6 @@ void _c_set_existing_ppstring_aligned(ESL_MSA *msa, char *ppstring, int idx)
  */
 void _c_set_existing_sastring_aligned(ESL_MSA *msa, char *sastring, int idx)
 {
-  int status;
-  
   int alen = strlen(sastring);
   if(alen != msa->alen) croak("_c_set_sqstring_aligned() trying to set sastring with string of incorrect length");
 
@@ -784,8 +777,6 @@ void _c_set_existing_sastring_aligned(ESL_MSA *msa, char *sastring, int idx)
  */
 void _c_set_existing_ssstring_aligned(ESL_MSA *msa, char *ssstring, int idx)
 {
-  int status;
-  
   int alen = strlen(ssstring);
   if(alen != msa->alen) croak("_c_set_sqstring_aligned() trying to set ssstring with string of incorrect length");
 
