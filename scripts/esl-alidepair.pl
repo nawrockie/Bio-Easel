@@ -27,7 +27,7 @@ my $min_fractdg = undef; # defined if --dg used
 
 my $usage;
 $usage  = "# esl-alidpair.pl :: remove consensus basepairs based on alignment posterior probabilities\n";
-$usage .= "# Bio-Easel 0.13 (Feb 2021)\n";
+$usage .= "# Bio-Easel 0.14 (March 2021)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-alidepair.pl [OPTIONS] <alignment file to work on> <name of output alignment file>\n";

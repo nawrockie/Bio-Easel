@@ -1,7 +1,7 @@
 Bio-Easel
 
-version 0.13
-February 2021
+version 0.14
+March 2021
 
 The README is used to introduce the module and provide instructions on
 how to install the module, any machine dependencies it may have (for
@@ -18,10 +18,10 @@ need to create a 'src' directory.
 
         mkdir src 
         cd src
-        curl -k -L -o easel-Bio-Easel-0.13.zip https://github.com/EddyRivasLab/easel/archive/Bio-Easel-0.13.zip
-        unzip easel-Bio-Easel-0.13.zip
-        mv easel-Bio-Easel-0.13 easel
-        rm easel-Bio-Easel-0.13.zip
+        curl -k -L -o easel-Bio-Easel-0.14.zip https://github.com/EddyRivasLab/easel/archive/Bio-Easel-0.14.zip
+        unzip easel-Bio-Easel-0.14.zip
+        mv easel-Bio-Easel-0.14 easel
+        rm easel-Bio-Easel-0.14.zip
         cd ..
 
 It also requires the Inline module which can be installed with:
