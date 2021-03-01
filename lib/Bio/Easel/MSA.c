@@ -709,7 +709,7 @@ SV *_c_get_sqstring_aligned(ESL_MSA *msa, int seqidx)
  * Dies:      if len(seqstring) != alen
  *            if msa is digitized and unable to digitize string
  */
-void *_c_set_sqstring_aligned(ESL_MSA *msa, char *seqstring, int seqidx)
+void _c_set_sqstring_aligned(ESL_MSA *msa, char *seqstring, int seqidx)
 {
   int status;
   
@@ -734,12 +734,11 @@ void *_c_set_sqstring_aligned(ESL_MSA *msa, char *seqstring, int seqidx)
 /* Function:  _c_set_existing_ppstring_aligned()
  * Incept:    EPN, Fri Feb 19 11:12:32 2021
  * Purpose:   Set PP for sequence <seqidx> to <ppstring>. It must already be allocated!
- * Returns:   void '1' on success
- *            '0' if msa->pp == NULL or msa->pp[seqidx] == NULL (not already allocated)
+ * Returns:   void
  * Dies:      if len(ppstring) != alen
  *            if msa->pp == NULL or msa->pp[idx] == NULL
  */
-void *_c_set_existing_ppstring_aligned(ESL_MSA *msa, char *ppstring, int idx)
+void _c_set_existing_ppstring_aligned(ESL_MSA *msa, char *ppstring, int idx)
 {
   int status;
   
@@ -757,12 +756,11 @@ void *_c_set_existing_ppstring_aligned(ESL_MSA *msa, char *ppstring, int idx)
 /* Function:  _c_set_existing_sastring_aligned()
  * Incept:    EPN, Fri Feb 19 13:07:52 2021
  * Purpose:   Set SA for sequence <seqidx> to <sastring>. It must already be allocated!
- * Returns:   void '1' on success
- *            '0' if msa->sa == NULL or msa->sa[seqidx] == NULL (not already allocated)
+ * Returns:   void
  * Dies:      if len(sastring) != alen
  *            if msa->sa == NULL or msa->sa[idx] == NULL
  */
-void *_c_set_existing_sastring_aligned(ESL_MSA *msa, char *sastring, int idx)
+void _c_set_existing_sastring_aligned(ESL_MSA *msa, char *sastring, int idx)
 {
   int status;
   
@@ -780,12 +778,11 @@ void *_c_set_existing_sastring_aligned(ESL_MSA *msa, char *sastring, int idx)
 /* Function:  _c_set_existing_ssstring_aligned()
  * Incept:    EPN, Fri Feb 19 11:12:32 2021
  * Purpose:   Set SS for sequence <seqidx> to <ssstring>. It must already be allocated!
- * Returns:   void '1' on success
- *            '0' if msa->ss == NULL or msa->ss[seqidx] == NULL (not already allocated)
+ * Returns:   void
  * Dies:      if len(ssstring) != alen
  *            if msa->ss == NULL or msa->ss[idx] == NULL
  */
-void *_c_set_existing_ssstring_aligned(ESL_MSA *msa, char *ssstring, int idx)
+void _c_set_existing_ssstring_aligned(ESL_MSA *msa, char *ssstring, int idx)
 {
   int status;
   
