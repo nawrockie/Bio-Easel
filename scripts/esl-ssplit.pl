@@ -39,7 +39,7 @@ my $seed         = 1801;  # seed for RNG
 
 my $usage;
 $usage  = "# esl-ssplit.pl :: split up an input sequence file into smaller files\n";
-$usage .= "# Bio-Easel 0.13 (Feb 2021)\n";
+$usage .= "# Bio-Easel 0.14 (March 2021)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-ssplit.pl [OPTIONS] <seqfile to split> <# seqs for each new file (or # new files if -n)>\n";
