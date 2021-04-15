@@ -77,7 +77,7 @@ for(my $i = 0; $i < $nseq; $i++) {
 
     if($rf_is_gap) { 
       if(! $sq_is_gap) { 
-        $desc = "insert-prior-to-RF-position";
+        $desc = "insert-after-RF-position";
       }
     }
     else { # rf is not a gap
