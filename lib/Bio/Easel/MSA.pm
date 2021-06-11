@@ -1212,7 +1212,7 @@ sub get_ppstring_aligned {
   Title    : get_sastring_aligned
   Incept   : EPN, Fri Feb 19 15:09:04 2021
   Usage    : $msaObject->get_sastring_aligned()
-  Function : Return an aligned posterior probability annotation for a seq from an MSA.
+  Function : Return an aligned SA annotation string for a seq from an MSA.
   Args     : index of sequence you want SA annotation
   Returns  : aligned SA annotation for sequence index idx
 
@@ -1302,6 +1302,7 @@ sub get_sqstring_unaligned_and_truncated {
 
   return $sqstring;
 }
+
 
 #-------------------------------------------------------------------------------
 
@@ -1615,7 +1616,7 @@ sub addGC {
 
   Title    : addGC_identity
   Incept   : EPN, Fri Nov  8 09:31:00 2013
-  Usage    : $msaObject->addGCidentity($use_)
+  Usage    : $msaObject->addGC_identity($use_res)
   Function : Add GC annotation to an ESL_MSA with
            : tag 'ID' with a '*' indicating columns
            : for which all sequences have an identical
@@ -1633,6 +1634,45 @@ sub addGC_identity {
   $self->_check_msa();
   my $status = _c_addGC_identity( $self->{esl_msa}, $use_res );
   if ( $status != $ESLOK ) { croak "ERROR: unable to add GC ID annotation"; }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 addGC_RF_column_numbers
+
+  Title    : addGC_rf_column_numbers
+  Incept   : EPN, Fri Jun 11 13:26:23 2021
+  Usage    : $msaObject->addGC_RF_column_numbers()
+  Function : Add GC annotation to an ESL_MSA with
+           : tag 'RFCOLX...' for RF positions.
+  Args     : void
+  Returns  : void
+  Dies     : via croak() if msa does not have RF annotation
+=cut
+
+sub addGC_rf_column_numbers {
+  my ( $self ) = @_;
+
+  $self->_check_msa();
+  if(! $self->has_rf) { croak "Trying to number RF gap columns, but no RF annotation exists in the MSA"; }
+  my @num_str_A = ();
+  _get_nongap_numbering_for_aligned_string($self->get_rf, \@num_str_A, ".-~", ".");
+
+  my $ndig = scalar(@num_str_A);
+
+  for(my $d = $ndig-1; $d >= 0; $d--) { 
+    my $tag = "RFCOL";
+    for(my $before = 0; $before < (($ndig-1)-$d); $before++) { 
+      $tag .= ".";
+    }
+    $tag .= "X";
+    for(my $after = 0; $after < $d; $after++) { 
+      $tag .= ".";
+    }
+    my $status = _c_addGC( $self->{esl_msa}, $tag, $num_str_A[$d] );
+    if ( $status != $ESLOK ) { croak "ERROR: unable to add GC RFCOL annotation"; }
+  }
   return;
 }
 
@@ -3765,6 +3805,93 @@ sub _check_all_sqname_nse {
   }
   # if we get here, all seq names are in name/start-end format
   return 1;
+}
+
+
+#-------------------------------------------------------------------------------
+
+=head2 _get_nongap_numbering_for_aligned_string
+
+  Title    : _get_nongap_numbering_for_aligned_string
+  Incept   : EPN, Fri Jun 11 12:22:30 2021
+  Usage    : _get_nongap_numbering_for_aligned_string($aligned_sqstring, $gap_str, $gap_char, $num_str_AR)
+  Function : Fill @{$num_str_AR} with strings that given numbering for nongap columns.
+           : Example:               AGCGA--GCGACG-GACG.GG
+           : Returns: 
+           :    @{$num_str_AR->[0]} 00000..000011.1111.11
+           :    @{$num_str_AR->[1]} 12345..678901.2345.67
+  Args     : $aligned_sqstring: aligned seq string for a sequence or RF (or other)
+           : $num_str_AR:       RETURN: filled with N numberings, where N is number of digits in 
+           :                    unaligned length of $aligned_sqstring
+           : $gap_str:          string with characters that are gaps in $aligned_sqstring (e.g. ".-~";), set to "" 
+           :                    to number ALL columns (even gap ones)
+           : $gap_char:         character to use for gaps in @{$num_str_AR}
+           :
+  Returns  : void, fills @{$num_str_AR}
+
+=cut
+
+sub _get_nongap_numbering_for_aligned_string { 
+  my ( $aligned_sqstring, $num_str_AR, $gap_str, $gap_char) = @_;
+
+  if(! defined $aligned_sqstring) { croak "In _get_nongap_numbering_for_aligned_string, aligned_sqstring is undefined"; }
+  if(! defined $num_str_AR)       { croak "In _get_nongap_numbering_for_aligned_string, num_str_AR is undefined"; }
+  if(! defined $gap_str)          { $gap_str  = ".-~"; }
+  if(! defined $gap_char)         { $gap_char = "."; }
+
+  chomp $aligned_sqstring;
+
+  # determine max index (number) column
+  my $dealigned_sqstring = $aligned_sqstring;
+  if($gap_str ne "") { # if $gap_str is "" we'll number ALL columns even gap ones
+    $dealigned_sqstring =~ s/[\Q$gap_str\E]//g;
+  }
+  my $max  = length($dealigned_sqstring);
+  my $ndig = length($max);
+
+  # initialize
+  @{$num_str_AR} = (); # set to empty
+  my $d;              # counter over digits
+  my @cur_val_A = (); # [0..$d..$ndig-1] current value for digit $d, $d == 0, 1s place, $d == 1, 10s place, $d == 2 100s place etc.
+  for($d = 0; $d < $ndig; $d++) { 
+    $num_str_AR->[$d] = "";
+    $cur_val_A[$d] = 0;
+  }
+
+  my @aligned_sqstring_A = split("", $aligned_sqstring);
+  my $i;
+  my $uapos = 0; # nongap, unaligned position in sequence 
+
+  for($i = 0; $i < scalar(@aligned_sqstring_A); $i++) { 
+    if(($gap_str eq "") || ($aligned_sqstring_A[$i] !~ /[\Q$gap_str\E]/)) { 
+      $uapos++;
+      my $keep_going = 1;
+      my $d = 0;
+      # increment 
+      while($keep_going) {
+        if($d >= $ndig) { croak "In _get_nongap_numbering_for_aligned_string, trying to number column to number above expected max of $max"; }
+        $cur_val_A[$d]++;
+        if($cur_val_A[$d] == 10) {
+          $cur_val_A[$d] = 0;
+          $keep_going = 1; # we'll increment $d and keep going (e.g. if we're at ones place and we reach 10, then we bump tens place)
+          $d++;
+        }
+        else { 
+          $keep_going = 0;
+        }
+      }
+      for($d = 0; $d < $ndig; $d++) { 
+        $num_str_AR->[$d] .= $cur_val_A[$d];
+      }
+    }
+    else { # gap in the sequence
+      for($d = 0; $d < $ndig; $d++) { 
+        $num_str_AR->[$d] .= $gap_char;
+      }
+    }
+  }
+
+  return;
 }
 
 #-------------------------------------------------------------------------------
