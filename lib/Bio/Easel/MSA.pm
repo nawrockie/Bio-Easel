@@ -1639,11 +1639,11 @@ sub addGC_identity {
 
 #-------------------------------------------------------------------------------
 
-=head2 addGC_RF_column_numbers
+=head2 addGC_rf_column_numbers
 
   Title    : addGC_rf_column_numbers
   Incept   : EPN, Fri Jun 11 13:26:23 2021
-  Usage    : $msaObject->addGC_RF_column_numbers()
+  Usage    : $msaObject->addGC_rf_column_numbers()
   Function : Add GC annotation to an ESL_MSA with
            : tag 'RFCOLX...' for RF positions.
   Args     : void
@@ -1672,6 +1672,47 @@ sub addGC_rf_column_numbers {
     }
     my $status = _c_addGC( $self->{esl_msa}, $tag, $num_str_A[$d] );
     if ( $status != $ESLOK ) { croak "ERROR: unable to add GC RFCOL annotation"; }
+  }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 addGC_all_column_numbers
+
+  Title    : addGC_all_column_numbers
+  Incept   : EPN, Fri Jun 11 13:26:23 2021
+  Usage    : $msaObject->addGC_all_column_numbers()
+  Function : Add GC annotation to an ESL_MSA with
+           : tag 'COLX...' for all positions.
+  Args     : void
+  Returns  : void
+  Dies     : via croak() if msa has 0 seqs (should be impossible)
+=cut
+
+sub addGC_all_column_numbers {
+  my ( $self ) = @_;
+
+  $self->_check_msa();
+  my @num_str_A = ();
+  if($self->nseq < 1) { croak "Trying to number columns, but no seqs exists in the MSA"; }
+  # fetch 1st seq, we can use any, and set gap_str to "", this tells _get_nongap_numbering_for_aligned_string()
+  # to number all columns
+  _get_nongap_numbering_for_aligned_string($self->get_sqstring_aligned(1), \@num_str_A, "", ".");  
+
+  my $ndig = scalar(@num_str_A);
+
+  for(my $d = $ndig-1; $d >= 0; $d--) { 
+    my $tag = "COL";
+    for(my $before = 0; $before < (($ndig-1)-$d); $before++) { 
+      $tag .= ".";
+    }
+    $tag .= "X";
+    for(my $after = 0; $after < $d; $after++) { 
+      $tag .= ".";
+    }
+    my $status = _c_addGC( $self->{esl_msa}, $tag, $num_str_A[$d] );
+    if ( $status != $ESLOK ) { croak "ERROR: unable to add GC COL annotation"; }
   }
   return;
 }
