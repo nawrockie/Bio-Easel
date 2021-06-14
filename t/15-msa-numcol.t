@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 39;
+use Test::More tests => 55;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -13,6 +13,7 @@ BEGIN {
 #####################################################################
 my $alnfile  = "./t/data/RF00177-3seqs.sto";
 my $alnfile2 = "./t/data/RF00014-seed.sto";
+my $alnfile3 = "./t/data/test.rf.sto";
 my $mode;
 my $msa1 = undef;
 my $msa2 = undef;
@@ -168,6 +169,59 @@ for($mode = 0; $mode <= 1; $mode++) {
   chomp $pos1;
   is($pos10, "#=GR CP000857.1/1802194-1802277 POSX. 000000000111111111122222222223.33333333344444444445555555555666666..6666777.777777788888", "addGR_seq_position_numbers() properly added 10s position numbers for seq 4 (mode $mode)"); 
   is($pos1,  "#=GR CP000857.1/1802194-1802277 POS.X 123456789012345678901234567890.12345678901234567890123456789012345..6789012.345678901234", "addGR_seq_position_numbers() properly added 1s position numbers for seq 4 (mode $mode)"); 
+
+  undef $msa2;
+  unlink $outfile;
+
+  # number all positions of *all* sequences, use even smaller alignment for this
+  undef $msa1; 
+  # test new 
+  $msa1 = Bio::Easel::MSA->new({
+      fileLocation => $alnfile3, 
+      forceText    => $mode,
+  });
+  isa_ok($msa1, "Bio::Easel::MSA");
+
+  # test addGR_all_seqs_position_numbers()
+  $msa1->addGR_all_seqs_position_numbers();
+
+  # write it out
+  $outfile = "./t/data/test-msa.out";
+  $msa1->write_msa($outfile, "pfam");
+
+  # read it in
+  undef $msa2;
+  $msa2 = Bio::Easel::MSA->new({
+    fileLocation => $outfile,
+    forceText    => $mode,
+  });
+  isa_ok($msa2, "Bio::Easel::MSA");
+
+  #make sure POS annotation correctly set by addGR_all_seqs_position_numbers()
+  open(IN, $outfile);
+  $trash = <IN>; # 1
+  $trash = <IN>; # 2
+  $trash = <IN>; # 3
+  $pos10 = <IN>; # 4
+  $pos1  = <IN>; # 5
+  chomp $pos10;
+  chomp $pos1;
+  is($pos10, "#=GR human POSX. .000000000111111111.122.222.", "addGR_all_seqs_position_numbers() properly added 10s position numbers for seq 1 (mode $mode)");
+  is($pos1,  "#=GR human POS.X .123456789012345678.901.234.", "addGR_all_seqs_position_numbers() properly added 1s position numbers for seq 1 (mode $mode)");
+  $trash = <IN>; # 6
+  $pos10 = <IN>; # 7
+  $pos1  = <IN>; # 8
+  chomp $pos10;
+  chomp $pos1;
+  is($pos10, "#=GR mouse POSX. 00000000011111.1111.122.2222", "addGR_all_seqs_position_numbers() properly added 10s position numbers for seq 2 (mode $mode)");
+  is($pos1, "#=GR mouse POS.X 12345678901234.5678.901.2345", "addGR_all_seqs_position_numbers() properly added 1s position numbers for seq 2 (mode $mode)");
+  $trash = <IN>; # 9
+  $pos10 = <IN>; # 10
+  $pos1  = <IN>; # 11
+  chomp $pos10;
+  chomp $pos1;
+  is($pos10, "#=GR orc   POSX. .00000000.01111111111222222.", "addGR_all_seqs_position_numbers() properly added 10s position numbers for seq 3 (mode $mode)");
+  is($pos1, "#=GR orc   POS.X .12345678.90123456789012345.", "addGR_all_seqs_position_numbers() properly added 1s position numbers for seq 3 (mode $mode)");
 
   undef $msa2;
   unlink $outfile;
