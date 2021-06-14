@@ -1564,13 +1564,15 @@ sub addGF {
            : $value: text for the line
            : $sqidx: seq index to add GS for
   Returns  : void
-
+  Dies     : via croak() if seq $sqidx doesn't exist
 =cut
 
 sub addGS {
   my ( $self, $tag, $value, $sqidx ) = @_;
 
   $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
   my $status = _c_addGS( $self->{esl_msa}, $sqidx, $tag, $value );
   if ( $status != $ESLOK ) { croak "ERROR: unable to add GS annotation"; }
   return;
@@ -1879,6 +1881,47 @@ sub addGR {
   # add it
   my $status = _c_addGR( $self->{esl_msa}, $tag, $sqidx, $annstr);
   if ( $status != $ESLOK ) { croak "ERROR: unable to add GR annotation"; }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 addGR_seq_position_numbers
+
+  Title    : addGR_seq_position_numbers
+  Incept   : EPN, Fri Jun 11 15:02:07 2021
+  Usage    : $msaObject->addGS_seq_position_numbers($sqidx)
+  Function : Add GR annotation to an ESL_MSA with
+           : tag 'POSX...' indicating the positions of each
+           : aligned residue within the sequence
+  Args     : void
+  Returns  : void
+  Dies     : via croak() if seq $sqidx doesn't exist
+=cut
+
+sub addGR_seq_position_numbers {
+  my ( $self, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  my @num_str_A = ();
+  _get_nongap_numbering_for_aligned_string($self->get_sqstring_aligned($sqidx), \@num_str_A, ".-~", ".");
+
+  my $ndig = scalar(@num_str_A);
+
+  for(my $d = $ndig-1; $d >= 0; $d--) { 
+    my $tag = "POS";
+    for(my $before = 0; $before < (($ndig-1)-$d); $before++) { 
+      $tag .= ".";
+    }
+    $tag .= "X";
+    for(my $after = 0; $after < $d; $after++) { 
+      $tag .= ".";
+    }
+    my $status = _c_addGR( $self->{esl_msa}, $tag, $sqidx, $num_str_A[$d] );
+    if ( $status != $ESLOK ) { croak "ERROR: unable to add GR POS annotation for sequence index $sqidx"; }
+  }
   return;
 }
 
