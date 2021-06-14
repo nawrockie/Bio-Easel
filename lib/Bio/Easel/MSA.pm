@@ -1927,6 +1927,34 @@ sub addGR_seq_position_numbers {
 
 #-------------------------------------------------------------------------------
 
+=head2 addGR_all_seqs_position_numbers
+
+  Title    : addGR_all_seqs_position_numbers
+  Incept   : EPN, Mon Jun 14 07:35:39 2021
+  Usage    : $msaObject->addGS_all_seqs_position_numbers()
+  Function : Add GR annotation to an ESL_MSA with
+           : tag 'POSX...' indicating the positions of each
+           : aligned residue within the sequence
+           : for all sequences
+  Args     : void
+  Returns  : void
+=cut
+
+sub addGR_all_seqs_position_numbers {
+  my ( $self ) = @_;
+
+  $self->_check_msa();
+  my $nseq = $self->nseq;
+
+  for(my $i = 0; $i < $nseq; $i++) { 
+    $self->addGR_seq_position_numbers($i);
+  }
+
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 getGR_given_tag_sqidx
 
   Title    : getGR_given_tag_sqidx
