@@ -9,3 +9,4 @@ Files to update:
 LICENSE     (version, date and copyright)
 README      (version, date ***AND*** Easel tag in instructions)
 scripts/*pl (version and date)
+RELEASE-NOTES.md (version and date and add list of changes)

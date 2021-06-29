@@ -14,7 +14,7 @@ my $in_alifile  = "";    # name of input MSA file
 
 my $usage;
 $usage  = "# esl-alicompare2rf.pl :: output differences between aligned sequences and RF\n";
-$usage .= "# Bio-Easel 0.14 (March 2021)\n";
+$usage .= "# Bio-Easel 0.15 (June 2021)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-alicompare2rf.pl <alignment file with RF anntotation>\n";
@@ -77,7 +77,7 @@ for(my $i = 0; $i < $nseq; $i++) {
 
     if($rf_is_gap) { 
       if(! $sq_is_gap) { 
-        $desc = "insert-prior-to-RF-position";
+        $desc = "insert-after-RF-position";
       }
     }
     else { # rf is not a gap
