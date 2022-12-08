@@ -10,11 +10,14 @@ use strict;
 use Getopt::Long;
 use Bio::Easel::MSA;
 
+my $version      = "0.15";
+my $date        = "June 2021";
+
 my $in_alifile  = "";    # name of input MSA file
 
 my $usage;
 $usage  = "# esl-alicompare2rf.pl :: output differences between aligned sequences and RF\n";
-$usage .= "# Bio-Easel 0.15 (June 2021)\n";
+$usage .= "# Bio-Easel $version ($date)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-alicompare2rf.pl <alignment file with RF anntotation>\n";
