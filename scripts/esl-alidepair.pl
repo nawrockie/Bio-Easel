@@ -15,8 +15,8 @@ use strict;
 use Getopt::Long;
 use Bio::Easel::MSA;
 
-my $version      = "0.15";
-my $date        = "June 2021";
+my $version      = "0.16";
+my $date        = "Dec 2022";
 
 my $in_alifile  = "";    # name of input MSA file
 my $outfile     = "";    # name of output alignment file
