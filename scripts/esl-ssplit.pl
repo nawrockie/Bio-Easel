@@ -15,6 +15,9 @@ use Getopt::Long;
 use Bio::Easel::SqFile;
 use Bio::Easel::Random;
 
+my $version      = "0.16";
+my $date        = "Dec 2022";
+
 my $in_sqfile    = "";    # name of input file to split up, 1st cmd line arg
 my $do_nseq      = 1;     # true by default, output files should have a specified number of seqs each
 my $nseq_per     = 0;     # number of seqs for each output file
@@ -39,7 +42,7 @@ my $seed         = 1801;  # seed for RNG
 
 my $usage;
 $usage  = "# esl-ssplit.pl :: split up an input sequence file into smaller files\n";
-$usage .= "# Bio-Easel 0.15 (June 2021)\n";
+$usage .= "# Bio-Easel $version ($date)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-ssplit.pl [OPTIONS] <seqfile to split> <# seqs for each new file (or # new files if -n)>\n";

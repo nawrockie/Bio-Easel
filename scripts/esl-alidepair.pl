@@ -15,6 +15,9 @@ use strict;
 use Getopt::Long;
 use Bio::Easel::MSA;
 
+my $version      = "0.16";
+my $date        = "Dec 2022";
+
 my $in_alifile  = "";    # name of input MSA file
 my $outfile     = "";    # name of output alignment file
 my $min_avgpp   = 0.9;   # minimum average posterior probability for keeping a consensus basepair
@@ -27,7 +30,7 @@ my $min_fractdg = undef; # defined if --dg used
 
 my $usage;
 $usage  = "# esl-alidpair.pl :: remove consensus basepairs based on alignment posterior probabilities\n";
-$usage .= "# Bio-Easel 0.15 (June 2021)\n";
+$usage .= "# Bio-Easel $version ($date)\n";
 $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 $usage .= "\n";
 $usage .= "Usage: esl-alidepair.pl [OPTIONS] <alignment file to work on> <name of output alignment file>\n";
