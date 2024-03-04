@@ -67,7 +67,7 @@ if((! $do_nc) && (! $do_dg)) {
 if(! -e $in_alifile) { die "ERROR $in_alifile does not exist"; }
 
 # open file 
-my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile });
+my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile, isRna => 1 });
 
 # check if we have sequence weights (if we need them)
 if($use_weights) { 
