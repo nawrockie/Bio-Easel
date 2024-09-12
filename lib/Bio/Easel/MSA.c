@@ -2858,6 +2858,145 @@ char *_c_most_informative_sequence(ESL_MSA *msa, float gapthresh, int use_weight
   return NULL; /* not reached */
 }
 
+/* Function:  _c_consensus_iupac_sequence()
+ * Incept:    EPN, Wed Sep 11 12:23:50 2024
+ * Synopsis:  Calculate the consensus sequence using IUPAC (possibly ambiguous) nt.
+ *            Similar to most_informative_sequence() but uses different rules 
+ *            (explained above) to determine consensus sequence. Also returns
+ *            fraction of sequences that the IUPAC code 'covers'.
+ * Args:      msa: the alignment
+ *            thresh: fraction of (possibly weighted) seqs IUPAC char should cover
+ *                    e.g if 0.43, and A=0.4, C=0.45, G=0.1, U=0.05, nt is C
+ *                    if 0.80, and A=0.4, C=0.45, G=0.1, U=0.05, nt is M
+ *            uc_thresh: [0..1] fraction of sequences that IUPAC nt must cover for it
+ *                       to be upper case, should be > $thresh but this is not enforced
+ *            use_rf: '1' to set consensus sequence to '.' for gap RF positions (die if RF is null)
+ *                    '0' calculate consensus IUPAC characters for all positions
+ *            use_weights: '1' to use weights, '0' not to
+ * Returns:   the 'most consensus IUPAC sequence' calculated here.
+ * Dies:      if MSA is NOT digitized, or if use_rf is '1' and RF is invalid or
+ *            if use_weights is '1' and weights are invalid
+ */
+void _c_consensus_iupac_sequence(ESL_MSA *msa, float thresh, float uc_thresh, int use_rf, int use_weights)
+{
+  Inline_Stack_Vars;
+
+  int        status;             /* Easel status */
+  int        i;                  /* counter over sequences */
+  int        a, a2;              /* counters over alphabet indices (residues) */
+  int        apos;               /* alignment position counter [0..alen-1] and [0..rflen-1], respectively */
+  double   **abcAA       = NULL; /* [0..apos..msa->alen-1][0..a..abc->K]: count of nt 'a' in column 'apos', a==abc->K are gaps, missing residues or nonresidues */
+  char      *cons_seq    = NULL; /* the most informative sequence, allocated below */
+  float     *cons_fractA = NULL; /* [0..apos..msa->alen-1] fraction of sequences covered by cons_seq[apos] */
+  int       *usedA       = NULL; /* [0..a..abc->K-1] usedA[a] is '1' if nt 'a' is used in the consensus seq for current column */
+  float      seen = 0.;          /* fraction of seqs covered by nt in usedA */
+  int        nadded;             /* number of nt added in usedA */
+  int        amatch;             /* degenerate residue index that matches current column */
+  int        argmax;             /* index of max frequency nt remaining */
+  int        found_mismatch;     /* set to '1' when we found a mismatch for current column and candidate degenerate residue */
+  float      seqwt = 0.;         /* weight of current sequence, always 1.0 if use_weights == FALSE */
+  
+  if(! (msa->flags & eslMSA_DIGITAL)) croak("_c_consensus_iupac_sequence() contract violation, MSA is not digitized");
+  if((! (msa->flags & eslMSA_HASWGTS)) && (use_weights)) croak("_c_consensus_iupac_sequence() trying to use weights, but they're not valid in the msa");
+  if((use_rf) && (msa->rf == NULL)) croak("_c_consensus_iupac_sequence() trying to use RF, but it is doesn't exist in the msa");
+    
+  /* allocate and initialize */
+  ESL_ALLOC(abcAA,       sizeof(double *)  * msa->alen); 
+  for(apos = 0; apos < msa->alen; apos++) { 
+    ESL_ALLOC(abcAA[apos], sizeof(double) * (msa->abc->K+1));
+    esl_vec_DSet(abcAA[apos], (msa->abc->K+1), 0.);
+  }
+  ESL_ALLOC(cons_seq, sizeof(char) * (msa->alen+1)); 
+  cons_seq[msa->alen] = '\0';
+  ESL_ALLOC(cons_fractA, sizeof(float) * (msa->alen+1)); 
+  esl_vec_FSet(cons_fractA, msa->alen, 0.);
+  ESL_ALLOC(usedA, sizeof(int) * msa->abc->K);
+  
+  /* compile counts */
+  for(i = 0; i < msa->nseq; i++) { 
+    seqwt = (use_weights) ? msa->wgt[i] : 1.0;
+    for(apos = 0; apos < msa->alen; apos++) { 
+      if((status = esl_abc_DCount(msa->abc, abcAA[apos], msa->ax[i][apos+1], seqwt)) != eslOK) croak("problem counting residue %d of seq %d", apos, i);
+    }
+  }
+
+  /* determine the (possibly degenerate) residue at each position that covers 'thresh' fraction of the (possibly weighted) sequences */
+  for(apos = 0; apos < msa->alen; apos++) { 
+    if((! use_rf) || (strchr("-_.~", msa->rf[apos]) == NULL)) { /* ! use_rf OR nongap RF character */
+      amatch = -1; /* this is set to a valid a [0..msa->abc->Kp-3] when we find it, and acts as a flag if we don't find one (which is an error) */
+      esl_vec_ISet(usedA, msa->abc->K, 0);
+      esl_vec_DNorm(abcAA[apos], 4);
+      nadded = 0; /* this should not exceed K */
+      seen = 0.;
+      while((seen < thresh) && (nadded < msa->abc->K)) {
+        seen += esl_vec_DMax(abcAA[apos], 4);
+        argmax = esl_vec_DArgMax(abcAA[apos], 4);
+        usedA[argmax] = 1;
+        cons_fractA[apos] += abcAA[apos][argmax];
+        abcAA[apos][argmax] = 0.; /* so next FMax call finds next highest value */
+        nadded++;
+      }
+      for(a = 0; a <= msa->abc->Kp-3; a++) { /* for each nucleotide, including degenerate ones */
+        found_mismatch = 0;
+        for(a2 = 0; a2 < msa->abc->K; a2++) {
+          if(msa->abc->degen[a][a2] != usedA[a2]) { /* a non-match */
+            found_mismatch = 1;
+          }
+        }
+        if(! found_mismatch) { 
+          amatch = a;
+          a = msa->abc->Kp; /* breaks us out of 'for(a = 0)' loop */
+        }
+      }
+      if(amatch == -1) { croak("unable to find a matching degenerate residue for position %d\n", apos+1); }
+      cons_seq[apos] = msa->abc->sym[amatch];
+      if(cons_fractA[apos] < uc_thresh) cons_seq[apos] = tolower(cons_seq[apos]);
+    }
+    else { /* use_rf is 1 and this is a gap in RF */
+      cons_seq[apos] = msa->abc->K; /* gap char */
+      cons_fractA[apos] = 0.;
+    }
+  }
+
+  /* clean up and return */
+  if(abcAA) {
+    for(apos = 0; apos < msa->alen; apos++) { 
+      if(abcAA[apos]) { 
+        free(abcAA[apos]);
+      }
+    }
+  }
+  free(abcAA);
+  if(usedA) free(usedA);
+
+  Inline_Stack_Reset;
+  for(apos = 0; apos < msa->alen; apos++) { 
+    Inline_Stack_Push(newSVnv(cons_seq[apos])); 
+  }
+  for(apos = 0; apos < msa->alen; apos++) { 
+    Inline_Stack_Push(newSVnv(cons_fractA[apos])); 
+  }
+  if(cons_fractA) free(cons_fractA);
+  free(cons_seq);
+  Inline_Stack_Done;
+  Inline_Stack_Return(2 * msa->alen);
+ 
+ ERROR:
+  if(abcAA) {
+    for(apos = 0; apos < msa->alen; apos++) { 
+      if(abcAA[apos]) { 
+        free(abcAA[apos]);
+      }
+    }
+  }
+  free(abcAA);
+  if(usedA)       free(usedA);
+  if(cons_seq)    free(cons_seq);
+  if(cons_fractA) free(cons_fractA);
+  croak("out of memory in _c_consensus_iupac_sequence()");
+  return; /* NOT REACHED */
+}
+
 /* Function:  _c_map_rfpos_to_apos()
  * Incept:    EPN, Mon May 19 11:00:49 2014
  * Synopsis:  Given an MSA, determine the alignment position of each nongap RF position

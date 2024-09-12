@@ -3252,6 +3252,63 @@ sub most_informative_sequence
 
 #-------------------------------------------------------------------------------
 
+=head2 consensus_iupac_sequence
+
+  Title     : consensus_iupac_sequence
+  Incept    : EPN, Wed Sep 11 11:56:47 2024
+  Usage     : $msaObject->consensus_sequence
+  Function  : Calculate the consensus sequence using IUPAC (possibly ambiguous) nt.
+            : Similar to most_informative_sequence() but uses different rules 
+            : (explained above) to determine consensus sequence. Also returns
+            : fraction of sequences that the IUPAC code 'covers'.
+  Args:     : $thresh:    [0..1] fraction of sequences that IUPAC nt must cover
+            :             e.g if 0.43, and A=0.4, C=0.45, G=0.1, U=0.05, nt is C
+            :             if 0.80, and A=0.4, C=0.45, G=0.1, U=0.05, nt is M
+            : $uc_thresh: [0..1] fraction of sequences that IUPAC nt must cover for it
+            :             to be upper case, should be > $thresh but this is not enforced
+            : $use_rf: '1' to set consensus sequence to '.' for gap RF positions (die if RF is null)
+            :          '0' calculate consensus IUPAC characters for all positions
+            : $use_weights: '1' to use weights in the MSA, '0' not to
+            :
+  Returns   : alen+1 values: 
+            : value 1 is the consensus sequence as a string, '.' for gap RF positions if use_rf==1
+            : values 2..alen are per position fractions that each consensus IUPAC symbol coves
+=cut
+
+sub consensus_iupac_sequence
+{
+  my ($self, $thresh, $uc_thresh, $use_rf, $use_weights, $cons_fract_AR) = @_;
+
+  if(! defined $thresh)      { $thresh      = 0.5; }
+  if(! defined $uc_thresh)   { $thresh      = 0.75; }
+  if(! defined $use_rf)      { $use_rf      = 0; }
+  if(! defined $use_weights) { $use_weights = 0; }
+
+  my @retA = _c_consensus_iupac_sequence($self->{esl_msa}, $thresh, $uc_thresh, $use_rf, $use_weights);
+
+  # @retA is length alen*2
+  # values 0   ..i..alen-1   are ansi codes for consensus position i
+  # values alen..i..(2*alen) are fraction of sequences covered by consensus position i
+  my $alen = (scalar(@retA)) / 2;
+
+  # build consensus sequence
+  my $cons_seq = "";
+  my $i;
+  for($i = 0; $i < $alen; $i++) {
+    $cons_seq .= sprintf("%c", $retA[$i]);
+  }
+  # fill @{$cons_fract_AR}
+  if(defined $cons_fract_AR) { 
+    @{$cons_fract_AR} = ();
+    for($i = $alen; $i < $alen+$alen; $i++) {
+      push(@{$cons_fract_AR}, $retA[$i]);
+    }
+  }
+  return ($cons_seq);
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 pos_fcbp
 
   Title     : pos_fcbp

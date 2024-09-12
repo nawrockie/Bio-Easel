@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 24;
+use Test::More tests => 27;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -20,6 +20,14 @@ isa_ok($msa1, "Bio::Easel::MSA");
 
 my $mis = $msa1->most_informative_sequence(0.5, 0);
 is($mis, "-WRSWCUUCGGMWSKSRCV-MMA-BYS-", "calculate_most_informative_sequence() worked.");
+
+my @cons_fract_A = ();
+my $cons_seq = $msa1->consensus_iupac_sequence(0.5, 0.75, 0, 0, \@cons_fract_A);
+is($cons_seq, "AaagaCUUCGGaucgggCmGacACsucA", "consensus_iupac_sequence() sequence construction worked.");
+my $cons_fract_val = sprintf("%.3f", $cons_fract_A[0]);
+is($cons_fract_val, "1.000", "consensus_iupac_sequence() sequence fraction worked (pos 1).");
+$cons_fract_val = sprintf("%.3f", $cons_fract_A[1]);
+is($cons_fract_val, "0.667", "consensus_iupac_sequence() sequence fraction worked (pos 2).");
 
 my @fcbpA = $msa1->pos_fcbp();
 is(int(($fcbpA[2] * 100) + 0.5), 0,   "calculate_pos_fcbp() seems to work (pos 3)");
