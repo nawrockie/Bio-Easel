@@ -3309,6 +3309,32 @@ sub consensus_iupac_sequence
 
 #-------------------------------------------------------------------------------
 
+=head2 pos_gap
+
+  Title     : pos_gap
+  Incept    : EPN, Fri Sep 13 13:39:03 2024
+  Usage     : $msaObject->pos_gap
+  Function  : Calculate the fraction of gaps for each position in a MSA. 
+  Args      : $use_weights: '1' to use weights in the MSA, '0' not to
+  Returns   : array of length msa->alen: the fraction of gaps
+            : at each position
+=cut
+
+sub pos_gap
+{
+  my ($self, $use_weights) = @_;
+
+  if(! defined $use_weights) {
+    $use_weights = 0;
+  }
+  
+  my @retA = _c_pos_gap($self->{esl_msa}, $use_weights);
+
+  return @retA;
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 pos_fcbp
 
   Title     : pos_fcbp
@@ -3396,6 +3422,29 @@ sub pos_conservation
   if(! defined $use_weights) { $use_weights = 0; }
 
   my @retA = _c_pos_conservation($self->{esl_msa}, $use_weights);
+
+  return @retA;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 pos_gaps
+
+  Title     : pos_gaps
+  Incept    : EPN, Fri Sep 13 10:13:30 2024
+  Usage     : $msaObject->pos_gaps
+  Function  : Calculate and return the fraction of gaps at each position of an MSA
+  Args      : $use_weights: '1' to use weights in the MSA, '0' not to
+  Returns   : array of length msa->alen: the fraction of gaps at each posn
+=cut
+
+sub pos_gaps
+{
+  my ($self, $use_weights) = @_;
+
+  if(! defined $use_weights) { $use_weights = 0; }
+
+  my @retA = _c_pos_gaps($self->{esl_msa}, $use_weights);
 
   return @retA;
 }

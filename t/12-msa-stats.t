@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 27;
+use Test::More tests => 30;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -28,6 +28,11 @@ my $cons_fract_val = sprintf("%.3f", $cons_fract_A[0]);
 is($cons_fract_val, "1.000", "consensus_iupac_sequence() sequence fraction worked (pos 1).");
 $cons_fract_val = sprintf("%.3f", $cons_fract_A[1]);
 is($cons_fract_val, "0.667", "consensus_iupac_sequence() sequence fraction worked (pos 2).");
+
+my @gapA = $msa1->pos_gap();
+is(int(($gapA[0] * 100) + 0.5), 67,  "calculate_pos_gap() seems to work (pos 1)");
+is(int(($gapA[1] * 100) + 0.5), 0,   "calculate_pos_gap() seems to work (pos 2)");
+is(int(($gapA[9] * 100) + 0.5), 33,  "calculate_pos_gap() seems to work (pos 10)");
 
 my @fcbpA = $msa1->pos_fcbp();
 is(int(($fcbpA[2] * 100) + 0.5), 0,   "calculate_pos_fcbp() seems to work (pos 3)");

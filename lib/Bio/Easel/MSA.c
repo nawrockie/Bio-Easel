@@ -2953,7 +2953,7 @@ void _c_consensus_iupac_sequence(ESL_MSA *msa, float thresh, float uc_thresh, in
       if(cons_fractA[apos] < uc_thresh) cons_seq[apos] = tolower(cons_seq[apos]);
     }
     else { /* use_rf is 1 and this is a gap in RF */
-      cons_seq[apos] = msa->abc->K; /* gap char */
+      cons_seq[apos] = msa->abc->sym[msa->abc->K]; /* gap char */
       cons_fractA[apos] = 0.;
     }
   }
@@ -3318,7 +3318,73 @@ void _c_pos_conservation(ESL_MSA *msa, int use_weights)
   croak("ERROR: _c_pos_conservation(), out of memory");
   return;
 }
-    
+
+/* Function:  _c_pos_gap()
+ * Incept:    EPN, Fri Sep 13 10:15:33 2024
+ * Synopsis:  Calculate and return the fraction of gaps at each alignment position.
+ * Args:      msa: the alignment
+ * Returns:   the fraction of gaps (as an array in Perl's return stack) 
+ */
+void _c_pos_gap(ESL_MSA *msa, int use_weights)
+{
+  Inline_Stack_Vars;
+
+  int        status;           /* error status */
+  int        apos;             /* counter over alignment positions */
+  int        i;                /* counter over sequences */
+  int        a;                /* counter over residues in an alphabet */
+  float      seqwt = 0.;       /* weight of current sequence, always 1.0 if use_weights == FALSE */
+  double   **abcAA    = NULL;  /* [0..apos..msa->alen-1][0..a..abc->K]: count of nt 'a' in column 'apos', a==abc->K are gaps, missing residues or nonresidues */
+  double    *gapA     = NULL;  /* [0..apos..msa->alen-1] fraction of gaps of column apos */
+
+  if(! (msa->flags & eslMSA_DIGITAL)) croak("_c_pos_gaps() contract violation, MSA is not digitized");
+  if((! (msa->flags & eslMSA_HASWGTS)) && (use_weights)) croak("_c_pos_gaps() trying to use weights, but they're not valid in the msa");
+
+  /* allocate and initialize */
+  ESL_ALLOC(abcAA, sizeof(double *)  * msa->alen); 
+  for(apos = 0; apos < msa->alen; apos++) { 
+    ESL_ALLOC(abcAA[apos], sizeof(double) * (msa->abc->K+1));
+    esl_vec_DSet(abcAA[apos], (msa->abc->K+1), 0.);
+  }
+  ESL_ALLOC(gapA, sizeof(double) * msa->alen);
+  esl_vec_DSet(gapA, msa->alen, 0.);
+
+  /* compile counts */
+  for(i = 0; i < msa->nseq; i++) { 
+    seqwt = (use_weights) ? msa->wgt[i] : 1.0;
+    for(apos = 0; apos < msa->alen; apos++) { 
+      if((status = esl_abc_DCount(msa->abc, abcAA[apos], msa->ax[i][apos+1], seqwt)) != eslOK) croak("problem counting residue %d of seq %d", apos, i);
+    }
+  }
+
+  /* calculate sequence conservation, and fill return array */
+  Inline_Stack_Reset;
+  for(apos = 0; apos < msa->alen; apos++) { 
+    esl_vec_DNorm(abcAA[apos], msa->abc->K+1); /* note: normalize all msa->abc->K+1 values (including gaps) this differs from what we did in _c_pos_entropy() */
+    gapA[apos] = abcAA[apos][msa->abc->K];
+    Inline_Stack_Push(newSVnv(gapA[apos])); 
+  }
+  Inline_Stack_Done;
+  Inline_Stack_Return(msa->alen);
+
+  /* clean up and return */
+  if(abcAA) { 
+    for(i = 0; i < msa->nseq; i++) { if(abcAA[i]) free(abcAA[i]); }
+    free(abcAA);
+  }
+  if(gapA)  free(gapA);
+  return;
+
+ ERROR:
+  if(abcAA) { 
+    for(i = 0; i < msa->nseq; i++) { if(abcAA[i]) free(abcAA[i]); }
+    free(abcAA);
+  }
+  if(gapA)  free(gapA);
+  croak("ERROR: _c_pos_gaps(), out of memory");
+  return;
+}
+
 /* Function:  _c_remove_gap_rf_basepairs()
  * Incept:    EPN, Fri Jan 29 16:27:32 2016
  * Synposis:  Remove any basepair (i,j) in msa->ss_cons for which 
