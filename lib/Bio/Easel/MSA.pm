@@ -425,6 +425,66 @@ sub has_ss_cons {
 
 #-------------------------------------------------------------------------------
 
+=head2 has_sa_cons
+
+  Title    : has_sa_cons
+  Incept   : EPN, Mon Sep 16 11:00:37 2024
+  Usage    : $msaObject->has_sa_cons()
+  Function : Does MSA have SA_cons annotation?
+  Args     : none
+  Returns  : '1' if MSA has SA_cons annotation, else returns 0
+
+=cut
+
+sub has_sa_cons {
+  my ($self) = @_;
+
+  $self->_check_msa();
+  return _c_has_sa_cons( $self->{esl_msa} );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 has_pp_cons
+
+  Title    : has_pp_cons
+  Incept   : EPN, Mon Sep 16 11:01:35 2024
+  Usage    : $msaObject->has_pp_cons()
+  Function : Does MSA have PP_cons annotation?
+  Args     : none
+  Returns  : '1' if MSA has PP_cons annotation, else returns 0
+
+=cut
+
+sub has_pp_cons {
+  my ($self) = @_;
+
+  $self->_check_msa();
+  return _c_has_pp_cons( $self->{esl_msa} );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 has_mm
+
+  Title    : has_mm
+  Incept   : EPN, Mon Sep 16 11:01:32 2024
+  Usage    : $msaObject->has_mm()
+  Function : Does MSA have MM annotation?
+  Args     : none
+  Returns  : '1' if MSA has MM annotation, else returns 0
+
+=cut
+
+sub has_mm { 
+  my ($self) = @_;
+
+  $self->_check_msa();
+  return _c_has_mm( $self->{esl_msa} );
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 get_rf
 
   Title    : get_rf
@@ -442,6 +502,90 @@ sub get_rf {
   $self->_check_msa();
   if(! $self->has_rf()) { croak "Trying to fetch RF from MSA but it does not exist"; }
   return _c_get_rf( $self->{esl_msa} );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 get_ss_cons
+
+  Title    : get_ss_cons
+  Incept   : EPN, Fri May 24 10:03:41 2013
+  Usage    : $msaObject->get_ss_cons()
+  Function : Returns msa->ss_cons if it exists, else dies via croak.
+  Args     : None
+  Returns  : msa->ss_cons if it exists, else dies
+
+=cut
+
+sub get_ss_cons { 
+  my ( $self ) = @_;
+
+  $self->_check_msa();
+  if(! $self->has_ss_cons()) { croak "Trying to fetch SS_cons from MSA but it does not exist"; }
+  return _c_get_ss_cons( $self->{esl_msa} );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 get_sa_cons
+
+  Title    : get_sa_cons
+  Incept   : EPN, Mon Sep 16 11:20:17 2024
+  Usage    : $msaObject->get_sa_cons()
+  Function : Returns msa->sa_cons if it exists, else dies via croak.
+  Args     : None
+  Returns  : msa->sa_cons if it exists, else dies
+
+=cut
+
+sub get_sa_cons { 
+  my ( $self, $idx ) = @_;
+
+  $self->_check_msa();
+  if(! $self->has_sa_cons()) { croak "Trying to fetch SA_CONS from MSA but it does not exist"; }
+  return _c_get_sa_cons( $self->{esl_msa} );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 get_pp_cons
+
+  Title    : get_pp_cons
+  Incept   : EPN, Mon Sep 16 11:20:17 2024
+  Usage    : $msaObject->get_pp_cons()
+  Function : Returns msa->pp_cons if it exists, else dies via croak.
+  Args     : None
+  Returns  : msa->pp_cons if it exists, else dies
+
+=cut
+
+sub get_pp_cons { 
+  my ( $self, $idx ) = @_;
+
+  $self->_check_msa();
+  if(! $self->has_pp_cons()) { croak "Trying to fetch PP_CONS from MSA but it does not exist"; }
+  return _c_get_pp_cons( $self->{esl_msa} );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 get_mm
+
+  Title    : get_mm
+  Incept   : EPN, Mon Sep 16 11:20:17 2024
+  Usage    : $msaObject->get_mm()
+  Function : Returns msa->mm if it exists, else dies via croak.
+  Args     : None
+  Returns  : msa->mm if it exists, else dies
+
+=cut
+
+sub get_mm { 
+  my ( $self, $idx ) = @_;
+
+  $self->_check_msa();
+  if(! $self->has_mm()) { croak "Trying to fetch MM from MSA but it does not exist"; }
+  return _c_get_mm( $self->{esl_msa} );
 }
 
 #-------------------------------------------------------------------------------
@@ -494,23 +638,91 @@ sub set_rf {
 
 #-------------------------------------------------------------------------------
 
-=head2 get_ss_cons
+=head2 set_ss_cons
 
-  Title    : get_ss_cons
-  Incept   : EPN, Fri May 24 10:03:41 2013
-  Usage    : $msaObject->get_ss_cons()
-  Function : Returns msa->ss_cons if it exists, else dies via croak.
-  Args     : None
-  Returns  : msa->ss_cons if it exists, else dies
+  Title    : set_ss_cons
+  Incept   : EPN, Tue Feb 18 10:15:25 2014
+  Usage    : $msaObject->set_ss_cons()
+  Function : Sets msa->ss_cons given a string.
+  Args     : $ss_cons_str: string that will become msa->ss_cons
+           : $do_full_wuss: '1' to do full WUSS notation
+  Returns  : void
+  Dies     : if length($ss_cons_str) != msa->alen
 
 =cut
 
-sub get_ss_cons { 
-  my ( $self ) = @_;
+sub set_ss_cons { 
+  my ( $self, $ss_cons_str ) = @_;
 
   $self->_check_msa();
-  if(! $self->has_ss_cons()) { croak "Trying to fetch SS_cons from MSA but it does not exist"; }
-  return _c_get_ss_cons( $self->{esl_msa} );
+  if(length($ss_cons_str) != $self->alen) { croak "Trying to set SS_cons with string of incorrect length"; }
+  return _c_set_ss_cons( $self->{esl_msa}, $ss_cons_str, 0 );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 set_sa_cons
+
+  Title    : set_sa_cons
+  Incept   : EPN, Mon Sep 16 11:22:47 2024
+  Usage    : $msaObject->set_sa_cons()
+  Function : Sets msa->sa_cons given a string.
+  Args     : $sa_cons_str: string that will become msa->sa_cons
+  Returns  : void
+  Dies     : if length($sa_cons_str) != msa->alen
+
+=cut
+
+sub set_sa_cons { 
+  my ( $self, $sa_cons_str ) = @_;
+
+  $self->_check_msa();
+  if(length($sa_cons_str) != $self->alen) { croak "Trying to set sa_cons with string of incorrect length"; }
+  return _c_set_sa_cons( $self->{esl_msa}, $sa_cons_str);
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 set_pp_cons
+
+  Title    : set_pp_cons
+  Incept   : EPN, Mon Sep 16 11:23:12 2024
+  Usage    : $msaObject->set_pp_cons()
+  Function : Sets msa->pp_cons given a string.
+  Args     : $pp_cons_str: string that will become msa->pp_cons
+  Returns  : void
+  Dies     : if length($pp_cons_str) != msa->alen
+
+=cut
+
+sub set_pp_cons { 
+  my ( $self, $pp_cons_str ) = @_;
+
+  $self->_check_msa();
+  if(length($pp_cons_str) != $self->alen) { croak "Trying to set pp_cons with string of incorrect length"; }
+  return _c_set_pp_cons( $self->{esl_msa}, $pp_cons_str);
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 set_mm
+
+  Title    : set_mm
+  Incept   : EPN, Mon Sep 16 11:23:12 2024
+  Usage    : $msaObject->set_mm()
+  Function : Sets msa->mm given a string.
+  Args     : $mm_str: string that will become msa->mm
+  Returns  : void
+  Dies     : if length($mm_str) != msa->alen
+
+=cut
+
+sub set_mm { 
+  my ( $self, $mm_str ) = @_;
+
+  $self->_check_msa();
+  if(length($mm_str) != $self->alen) { croak "Trying to set MM with string of incorrect length"; }
+  return _c_set_mm( $self->{esl_msa}, $mm_str);
 }
 
 #-------------------------------------------------------------------------------
@@ -563,28 +775,6 @@ sub get_ss_cons_ct {
   my @ctA = _c_get_ss_cons_ct($self->{esl_msa});
 
   return @ctA;
-}
-
-#-------------------------------------------------------------------------------
-
-=head2 set_ss_cons
-
-  Title    : set_ss_cons
-  Incept   : EPN, Tue Feb 18 10:15:25 2014
-  Usage    : $msaObject->set_ss_cons()
-  Function : Sets msa->ss_cons given a string.
-  Args     : $ss_cons_str: string that will become msa->ss_cons
-  Returns  : void
-  Dies     : if length($ss_cons_str) != msa->alen
-
-=cut
-
-sub set_ss_cons { 
-  my ( $self, $ss_cons_str ) = @_;
-
-  $self->_check_msa();
-  if(length($ss_cons_str) != $self->alen) { croak "Trying to set SS_cons with string of incorrect length"; }
-  return _c_set_ss_cons( $self->{esl_msa}, $ss_cons_str, 0 );
 }
 
 #-------------------------------------------------------------------------------
@@ -3677,6 +3867,54 @@ sub get_ppstr_avg {
     $ppavg /= $ppct; 
   }
   return ($ppavg, $ppct);
+}
+#-------------------------------------------------------------------------------
+
+=head2 get_rf_map
+
+  Title    : get_rf_map
+  Incept   : EPN, Fri Sep 13 14:50:37 2024
+  Usage    : Bio::Easel::MSA::get_rf_map($rf2a_map_AR, $a2rf_map_AR)
+  Function : Map nongap RF positions to alignment positions and vice versa.
+  Args     : <rf2a_map_AR>: ref to array [1..rfpos..rflen]: apos, nongap RF posn maps to aligment position apos
+           :                can be undef if not wanted
+           : <a2rf_map_AR>: ref to array [1..apos..alen]: rfpos, alignment position maps to nongap RF posn rfpos
+           :                -1 if apos maps to a gap in RF, can be undef if not wanted
+           : <gapstr>:      string of characters to consider as gaps, if undefined we use '.-~'
+  Returns  : void
+=cut
+
+sub get_rf_map {
+  my ( $self, $rf2a_map_AR, $a2rf_map_AR, $gapstr ) = @_;
+
+  my @rf2a_map_A = ();
+  my @a2rf_map_A = ();
+  if(! $self->has_rf) {
+    croak "ERROR in get_rf_map, no RF annotation";
+  }
+  if(! defined $gapstr) { $gapstr = ".-~"; }
+
+  my $rfstr = $self->get_rf();
+  my @rf_A = split("", $rfstr);
+  my $rfpos = 0;
+  for(my $apos = 1; $apos <= $self->alen; $apos++) {
+    if($rf_A[($apos-1)] =~ m/[\Q$gapstr\E]/) { # gap
+      $a2rf_map_A[$apos] = -1;
+    }
+    else {
+      $rf2a_map_A[++$rfpos] = $apos;
+      $a2rf_map_A[$apos]    = $rfpos;
+    }
+  }
+
+  if(defined $rf2a_map_AR) {
+    @{$rf2a_map_AR} = @rf2a_map_A;
+  }
+  if(defined $a2rf_map_AR) {
+    @{$a2rf_map_AR} = @a2rf_map_A;
+  }
+
+  return;
 }
 
 #-------------------------------------------------------------------------------

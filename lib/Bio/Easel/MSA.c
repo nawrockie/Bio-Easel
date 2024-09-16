@@ -358,16 +358,97 @@ int _c_has_ss_cons (ESL_MSA *msa)
   else             return 0;
 }
 
+/* Function:  _c_has_sa_cons()
+ * Incept:    EPN, Mon Sep 16 11:02:32 2024
+ * Synopsis:  Returns TRUE if msa->sa_cons is valid
+ * Returns:   Returns '1' if msa->sa_cons is non-NULL, else returns 0
+ */
+int _c_has_sa_cons (ESL_MSA *msa)
+{
+  if(msa->sa_cons) return 1;
+  else             return 0;
+}
+
+/* Function:  _c_has_pp_cons()
+ * Incept:    EPN, Mon Sep 16 11:02:45 2024
+ * Synopsis:  Returns TRUE if msa->pp_cons is valid
+ * Returns:   Returns '1' if msa->pp_cons is non-NULL, else returns 0
+ */
+int _c_has_pp_cons (ESL_MSA *msa)
+{
+  if(msa->pp_cons) return 1;
+  else             return 0;
+}
+
+/* Function:  _c_has_mm()
+ * Incept:    EPN, Mon Sep 16 11:02:58 2024
+ * Synopsis:  Returns TRUE if msa->mm is valid
+ * Returns:   Returns '1' if msa->mm is non-NULL, else returns 0
+ */
+int _c_has_mm (ESL_MSA *msa)
+{
+  if(msa->mm) return 1;
+  else        return 0;
+}
+
 /* Function:  _c_get_rf()
  * Incept:    EPN, Thu Nov 21 10:10:51 2013
  * Synopsis:  Returns msa->rf if non-NULL, else dies.
  *            Caller should have used _c_has_rf to verify it exists.
- * Returns:   msa->rf()
+ * Returns:   msa->rf
  */
 char *_c_get_rf (ESL_MSA *msa)
 {
   if(msa->rf == NULL) croak("_c_get_rf, but RF is NULL");
   return msa->rf;
+}
+
+/* Function:  _c_get_ss_cons()
+ * Incept:    EPN, Fri May 24 09:58:32 2013
+ * Synopsis:  Returns msa->ss_cons if non-NULL, else dies.
+ *            Caller should have used _c_has_ss_cons to verify it exists.
+ * Returns:   msa->ss_cons
+ */
+char *_c_get_ss_cons (ESL_MSA *msa)
+{
+  if(msa->ss_cons == NULL) croak("_c_get_ss_cons, but SS_cons is NULL");
+  return msa->ss_cons;
+}
+
+/* Function:  _c_get_sa_cons()
+ * Incept:    EPN, Mon Sep 16 11:04:23 2024
+ * Synopsis:  Returns msa->sa_cons if non-NULL, else dies.
+ *            Caller should have used _c_has_sa_cons to verify it exists.
+ * Returns:   msa->sa_cons
+*/
+char *_c_get_sa_cons (ESL_MSA *msa)
+{
+  if(msa->sa_cons == NULL) croak("_c_get_ss_cons, but SA_cons is NULL");
+  return msa->sa_cons;
+}
+
+/* Function:  _c_get_pp_cons()
+ * Incept:    EPN, Mon Sep 16 11:05:23 2024
+ * Synopsis:  Returns msa->pp_cons if non-NULL, else dies.
+ *            Caller should have used _c_has_pp_cons to verify it exists.
+ * Returns:   msa->pp_cons
+ */
+char *_c_get_pp_cons (ESL_MSA *msa)
+{
+  if(msa->pp_cons == NULL) croak("_c_get_ss_cons, but PP_cons is NULL");
+  return msa->pp_cons;
+}
+
+/* Function:  _c_get_mm()
+ * Incept:    EPN, Mon Sep 16 11:05:25 2024E
+ * Synopsis:  Returns msa->mm if non-NULL, else dies.
+ *            Caller should have used _c_has_mm to verify it exists.
+ * Returns:   msa->mm
+ */
+char *_c_get_mm (ESL_MSA *msa)
+{
+  if(msa->mm == NULL) croak("_c_get_mm, but MM is NULL");
+  return msa->mm;
 }
 
 /* Function:  _c_set_rf()
@@ -384,18 +465,6 @@ void _c_set_rf (ESL_MSA *msa, char *rfstr)
   esl_strdup(rfstr, rflen, &(msa->rf));
   return;
 }   
-
-/* Function:  _c_get_ss_cons()
- * Incept:    EPN, Fri May 24 09:58:32 2013
- * Synopsis:  Returns msa->ss_cons if non-NULL, else dies.
- *            Caller should have used _c_has_ss_cons to verify it exists.
- * Returns:   msa->ss_cons()
- */
-char *_c_get_ss_cons (ESL_MSA *msa)
-{
-  if(msa->ss_cons == NULL) croak("_c_get_ss_cons, but SS_cons is NULL");
-  return msa->ss_cons;
-}
 
 /* Function:  _c_set_ss_cons()
  * Incept:    EPN, Tue Feb 18 10:18:29 2014
@@ -415,6 +484,51 @@ void _c_set_ss_cons (ESL_MSA *msa, char *ss_cons_str, int do_full_wuss)
       croak("_c_set_ss_cons() problem converting SS_cons to full WUSS notation"); 
     }
   }
+  return;
+}   
+
+/* Function:  _c_set_sa_cons()
+ * Incept:    EPN, Mon Sep 16 11:07:05 2024
+ * Synopsis:  Sets msa->sa_cons
+ * Returns:   void
+ */
+void _c_set_sa_cons (ESL_MSA *msa, char *sa_cons_str)
+{
+  int sa_cons_len = strlen(sa_cons_str);
+  if(sa_cons_len != msa->alen) croak("_c_set_sa_cons() trying to set SA_CONS with string of incorrect length");
+  if(msa->sa_cons) free(msa->sa_cons);
+
+  esl_strdup(sa_cons_str, sa_cons_len, &(msa->sa_cons));
+  return;
+}   
+
+/* Function:  _c_set_pp_cons()
+ * Incept:    EPN, Mon Sep 16 11:18:34 2024
+ * Synopsis:  Sets msa->pp_cons
+ * Returns:   void
+ */
+void _c_set_pp_cons (ESL_MSA *msa, char *pp_cons_str)
+{
+  int pp_cons_len = strlen(pp_cons_str);
+  if(pp_cons_len != msa->alen) croak("_c_set_pp_cons() trying to set PP_CONS with string of incorrect length");
+  if(msa->pp_cons) free(msa->pp_cons);
+
+  esl_strdup(pp_cons_str, pp_cons_len, &(msa->pp_cons));
+  return;
+}   
+
+/* Function:  _c_set_mm()
+ * Incept:    EPN, Mon Sep 16 11:18:34 2024
+ * Synopsis:  Sets msa->mm
+ * Returns:   void
+ */
+void _c_set_mm (ESL_MSA *msa, char *mm_str)
+{
+  int mm_len = strlen(mm_str);
+  if(mm_len != msa->alen) croak("_c_set_mm() trying to set MM with string of incorrect length");
+  if(msa->mm) free(msa->mm);
+
+  esl_strdup(mm_str, mm_len, &(msa->mm));
   return;
 }   
 
