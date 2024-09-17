@@ -54,6 +54,8 @@ my $misgaprf       = 0.5;
 my $do_weights     = 0;
 my $do_describe    = 0;
 
+my $cmdline = "esl-aliconsensus.pl ". join(" ", @ARGV);
+
 &GetOptions( "consthr1=s"  => \$consthr1, 
              "consthr2=s"  => \$consthr2, 
              "consrf"      => \$do_consrf, 
@@ -66,7 +68,8 @@ my $do_describe    = 0;
              "weights"     => \$do_weights,
              "describe"    => \$do_describe );
 
-if($do_describe) { 
+if($do_describe) {
+  # describe annotations and exit
   print("Per-column annotation descriptions:\n");
   print("CONS: most specific IUPAC nt that explains <y> > $consthr1 (changeable to <x> with \"--consthr1 <x>\")\n");
   print("      if lower case, then <y> < $consthr2 (changeable to <y> with \"--consthr2 <y>\")\n");
@@ -112,12 +115,15 @@ if(! -e $in_alifile) { die "ERROR $in_alifile does not exist"; }
 my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile,
 });
 
+# make sure MSA has RF if we need it
 if($do_consrf || $do_gaprf) {
   if(! $msa->has_rf) {
     die "ERROR with --consrf and --gaprf, input alignment must have #=GC RF annotation";
   }
 }
 
+my @gc_added_A = ();
+# determine and add CONS and CONSFRACT annotation 
 if(! $do_nocons) { 
   my @cons_fract_A = ();
   my @cons_fract_code_A = ();
@@ -136,10 +142,14 @@ if(! $do_nocons) {
     }
   }
   $msa->addGC("CONS", \@cons_seq_A);
+  push(@gc_added_A, "CONS");
   if(! $do_noconsfract) { 
     $msa->addGC("CONSFRACT", \@cons_fract_code_A);
+    push(@gc_added_A, "CONSFRACT");
   }
 }
+
+# determine and add GAPFRACT annotation
 if($do_gapfract) {
   my @gap_fract_A = ();
   @gap_fract_A = $msa->pos_gap($do_weights);
@@ -158,12 +168,27 @@ if($do_gapfract) {
     }
   }
   $msa->addGC("GAPFRACT", \@gap_fract_code_A);
+  push(@gc_added_A, "GAPFRACT");
 }
+
+# determine and add MIS annotation
 if($do_mis) { 
   my $mis = $msa->most_informative_sequence($misgaprf, $do_weights);
   my @mis_A = split("", $mis);
   $msa->addGC("MIS", \@mis_A);
+  push(@gc_added_A, "MIS");
 }
+
+# write comment explaining what annotation was added and with what cmdline
+my $comment = "";
+if(scalar(@gc_added_A) > 0) {
+  for(my $g = 0; $g < scalar(@gc_added_A) - 1; $g++) {
+    $comment .= $gc_added_A[$g] . ", ";
+  }
+  $comment .= $gc_added_A[(scalar(@gc_added_A)-1)] . " GC annotation added with command '$cmdline' [Bio-Easel v$version]";
+}
+$msa->addGF("CC", $comment);
+
 $msa->write_msa("STDOUT", "stockholm", 0);
 
 sub frequency_to_annotation_code {
