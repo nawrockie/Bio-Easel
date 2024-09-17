@@ -31,26 +31,28 @@ $usage .= "Usage: esl-aliconsensus.pl [OPTIONS] <input alignment>\n";
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t--consthr1 <x> : threshold for fraction of seqs that must be covered by consensus iupac nt [df: 0.5]\n";
 $usage .= "\t\t--consthr2 <x> : threshold for making consensus iupac nt uppercase [df: 0.75]\n";
-$usage .= "\t\t--consrf       : for CONS annotation, mark gap RF positions as gaps\n";
+$usage .= "\t\t--consrfonly   : for CONS annotation, mark gap RF positions as gaps\n";
+$usage .= "\t\t--cons2rf      : rewrite existing RF annotation as the CONS annotation (requires --consrfonly)\n";
 $usage .= "\t\t--nocons       : do not add GC CONS consensus sequence annotation [df: do add it]\n";
 $usage .= "\t\t--noconsfract  : add GC CONSFRACT consensus sequence fraction annotation\n";
 $usage .= "\t\t--gapfract     : add GC GAPFRACT fraction of seqs that are gaps annotation\n";
 $usage .= "\t\t--gaprf        : for GAPFRACT annotation, mark gap RF positions as gaps\n";
 $usage .= "\t\t--mis          : add GC MIS 'most informative sequence' annotation\n";
-$usage .= "\t\t--misgaprf <x> : with --mis, set threshold for a gap in MIS as <x> [df: 0.5]\n"; 
+$usage .= "\t\t--misgap <x>   : with --mis, set threshold for a gap in MIS as <x> [df: 0.5]\n"; 
 $usage .= "\t\t--weights      : use sequence weights in the alignment\n";
 $usage .= "\t\t--describe     : output descriptions of possible annotation and exit\n";
 
 # set defaults
 my $consthr1       = 0.5;
 my $consthr2       = 0.75; 
-my $do_consrf      = 0;
+my $do_consrfonly  = 0;
+my $do_cons2rf     = 0;
 my $do_nocons      = 0;
 my $do_noconsfract = 0;
 my $do_gapfract    = 0;
 my $do_gaprf       = 0;
 my $do_mis         = 0;
-my $misgaprf       = 0.5;
+my $misgap         = 0.5;
 my $do_weights     = 0;
 my $do_describe    = 0;
 
@@ -58,13 +60,14 @@ my $cmdline = "esl-aliconsensus.pl ". join(" ", @ARGV);
 
 &GetOptions( "consthr1=s"  => \$consthr1, 
              "consthr2=s"  => \$consthr2, 
-             "consrf"      => \$do_consrf, 
+             "consrfonly"  => \$do_consrfonly, 
+             "cons2rf"     => \$do_cons2rf, 
              "nocons"      => \$do_nocons,
              "noconsfract" => \$do_nocons,
              "gapfract"    => \$do_gapfract,
              "gaprf"       => \$do_gaprf,
              "mis"         => \$do_mis,
-             "misgaprf=s"  => \$misgaprf,
+             "misgap=s"    => \$misgap,
              "weights"     => \$do_weights,
              "describe"    => \$do_describe );
 
@@ -73,7 +76,8 @@ if($do_describe) {
   print("Per-column annotation descriptions:\n");
   print("CONS: most specific IUPAC nt that explains <y> > $consthr1 (changeable to <x> with \"--consthr1 <x>\")\n");
   print("      if lower case, then <y> < $consthr2 (changeable to <y> with \"--consthr2 <y>\")\n");
-  print("      If --consrf and alignment has RF annotation, gap RF positions will always be gaps\n");
+  print("      If --consrfonly and alignment has RF annotation, gap RF positions will always be gaps\n");
+  printf("     If --cons2rf, the existing RF annotation will be rewritten as the CONS annotation\n");
   print("\n");
   print("CONSFRACT: <y> value for CONS annotation, encoded as explained below\n");
   print("\n");
@@ -82,7 +86,7 @@ if($do_describe) {
   print("\n");
   print("MIS: most-informative-sequence, IUPAC code that corresponds to all nt above background\n");
   print("     background calculated as the frequency of nt in alignment, across all columns.\n");
-  print("     Columns in which <z> > $misgaprf (changeable to <z> with \"--misgaprf\ <z>\")\n");
+  print("     Columns in which <z> > $misgap (changeable to <z> with \"--misgap\ <z>\")\n");
   print("     sequences are gaps are annotated as '.'\n");
   print("\n");
   print("Encoding of fractional values [0.0..1.0] in CONSFRACT and GAPFRACT annotation:\n");
@@ -115,10 +119,23 @@ if(! -e $in_alifile) { die "ERROR $in_alifile does not exist"; }
 my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile,
 });
 
+# check that if --nocons is used, --cons2rf and --consrfonly are not also used
+if($do_nocons && $do_cons2rf) {
+  die "ERROR --cons2rf does not make sense in combination with --nocons";
+}
+if($do_nocons && $do_consrfonly) {
+  die "ERROR --consrfonly does not make sense in combination with --nocons";
+}
+  
+# check that if --cons2rf is used, --consrfonly is also used
+if($do_cons2rf && (! $do_consrfonly)) {
+  die "ERROR with --cons2rf, --consrfonly must also be used";
+}
+
 # make sure MSA has RF if we need it
-if($do_consrf || $do_gaprf) {
+if($do_consrfonly || $do_gaprf) {
   if(! $msa->has_rf) {
-    die "ERROR with --consrf and --gaprf, input alignment must have #=GC RF annotation";
+    die "ERROR with --consrfonly and --gaprf, input alignment must have #=GC RF annotation";
   }
 }
 
@@ -127,7 +144,7 @@ my @gc_added_A = ();
 if(! $do_nocons) { 
   my @cons_fract_A = ();
   my @cons_fract_code_A = ();
-  my $cons_seq = $msa->consensus_iupac_sequence($consthr1, $consthr2, $do_consrf, $do_weights, \@cons_fract_A);
+  my $cons_seq = $msa->consensus_iupac_sequence($consthr1, $consthr2, $do_consrfonly, $do_weights, \@cons_fract_A);
   my @cons_seq_A = split("", $cons_seq);
   #printf("$cons_seq\n");
   
@@ -141,8 +158,13 @@ if(! $do_nocons) {
       $cons_fract_code_A[$i] = frequency_to_annotation_code($cons_fract_A[$i]);
     }
   }
-  $msa->addGC("CONS", \@cons_seq_A);
-  push(@gc_added_A, "CONS");
+  if($do_cons2rf) {
+    $msa->set_rf(join("", @cons_seq_A));
+  }
+  else { 
+    $msa->addGC("CONS", \@cons_seq_A);
+    push(@gc_added_A, "CONS");
+  }
   if(! $do_noconsfract) { 
     $msa->addGC("CONSFRACT", \@cons_fract_code_A);
     push(@gc_added_A, "CONSFRACT");
@@ -173,7 +195,7 @@ if($do_gapfract) {
 
 # determine and add MIS annotation
 if($do_mis) { 
-  my $mis = $msa->most_informative_sequence($misgaprf, $do_weights);
+  my $mis = $msa->most_informative_sequence($misgap, $do_weights);
   my @mis_A = split("", $mis);
   $msa->addGC("MIS", \@mis_A);
   push(@gc_added_A, "MIS");
@@ -185,8 +207,15 @@ if(scalar(@gc_added_A) > 0) {
   for(my $g = 0; $g < scalar(@gc_added_A) - 1; $g++) {
     $comment .= $gc_added_A[$g] . ", ";
   }
-  $comment .= $gc_added_A[(scalar(@gc_added_A)-1)] . " GC annotation added with command '$cmdline' [Bio-Easel v$version]";
+  $comment .= $gc_added_A[(scalar(@gc_added_A)-1)] . " GC annotation added";
+  if($do_cons2rf) {
+    $comment .= " and ";
+  }
 }
+if($do_cons2rf) { 
+  $comment .= "RF annotation redefined as CONS";
+}
+$comment .= " with command '$cmdline' [Bio-Easel v$version]";
 $msa->addGF("CC", $comment);
 
 $msa->write_msa("STDOUT", "stockholm", 0);
