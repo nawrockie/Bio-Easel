@@ -202,21 +202,24 @@ if($do_mis) {
 }
 
 # write comment explaining what annotation was added and with what cmdline
-my $comment = "";
+my $comment_line1 = "";
+my $comment_line2 = "";
 if(scalar(@gc_added_A) > 0) {
   for(my $g = 0; $g < scalar(@gc_added_A) - 1; $g++) {
-    $comment .= $gc_added_A[$g] . ", ";
+    $comment_line1 .= $gc_added_A[$g] . ", ";
   }
-  $comment .= $gc_added_A[(scalar(@gc_added_A)-1)] . " GC annotation added";
+  $comment_line1 .= $gc_added_A[(scalar(@gc_added_A)-1)] . " GC annotation added";
   if($do_cons2rf) {
-    $comment .= " and ";
+    $comment_line1 .= " and ";
   }
 }
 if($do_cons2rf) { 
-  $comment .= "RF annotation redefined as CONS";
+  $comment_line1 .= "RF annotation redefined as CONS";
 }
-$comment .= " with command '$cmdline' [Bio-Easel v$version]";
-$msa->addGF("CC", $comment);
+$comment_line1 .= " with command:";
+$comment_line2 = "'$cmdline' [Bio-Easel v$version]";
+$msa->addGF("CC", $comment_line1);
+$msa->addGF("CC", $comment_line2);
 
 $msa->write_msa("STDOUT", "stockholm", 0);
 
