@@ -175,7 +175,26 @@ if(defined $in_gc) {
         push(@dst_gc_A, ".");
       }
     }
-    $dst_msa->addGC($transfer_gc_tag, \@dst_gc_A);
+
+    # add the annotation
+    if($transfer_gc_tag eq "RF") { 
+      $dst_msa->set_rf(join("", @dst_gc_A));
+    }      
+    elsif($transfer_gc_tag eq "SS_cons") {
+      $dst_msa->set_ss_cons(join("", @dst_gc_A));
+    }
+    elsif($transfer_gc_tag eq "SA_cons") {
+      $dst_msa->set_sa_cons(join("", @dst_gc_A));
+    }
+    elsif($transfer_gc_tag eq "PP_cons") {
+      $dst_msa->set_pp_cons(join("", @dst_gc_A));
+    }
+    elsif($transfer_gc_tag eq "MM") { 
+      $dst_msa->set_mm(join("", @dst_gc_A));
+    }
+    else { 
+      $dst_msa->addGC($transfer_gc_tag, \@dst_gc_A);
+    }
   } # end of 'foreach my $transfer_gc_tag (@transfer_gc_tag_A)'
 } # end of 'if(defined $in_gc)'
 
