@@ -1743,6 +1743,28 @@ sub addGF {
 
 #-------------------------------------------------------------------------------
 
+=head2 add_comment
+
+  Title    : add_comment
+  Incept   : EPN, Tue Sep 17 13:12:32 2024
+  Usage    : $msaObject->add_comment($value)
+  Function : Add comment (GF CC) tag/value to a C ESL_MSA object.
+  Args     : $value: text for the line
+  Returns  : void
+
+=cut
+
+sub add_comment {
+  my ( $self, $value ) = @_;
+
+  $self->_check_msa();
+  my $status = _c_add_comment( $self->{esl_msa}, $value );
+  if ( $status != $ESLOK ) { croak "ERROR: unable to add comment"; }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 addGS
 
   Title    : addGS
@@ -2336,6 +2358,7 @@ sub getGR_tag {
 #-------------------------------------------------------------------------------
 
 =head2 getGR_tagidx
+
 
   Title    : getGR_tagidx
   Incept   : EPN, Wed Jan 29 12:29:44 2020
@@ -3391,6 +3414,42 @@ sub capitalize_based_on_rf
 
 #-------------------------------------------------------------------------------
 
+=head2 get_special_GF
+
+  Title     : get_special_GF
+  Incept    : EPN, Wed Sep 18 10:26:51 2024
+  Usage     : $msaObject->get_special_GF
+  Function  : Get the special GF annotation ("ID", "AC", "DE", "AU")
+  Args      : $gf_tag_AR:   ref to array to add special annotation tags to, if any exist
+            : $gf_value_AR: ref to array to add special annotation values to, if any exist
+  Returns   : void
+=cut
+
+sub get_special_GF
+{
+  my ($self, $gf_tag_AR, $gf_value_AR) = @_;
+
+  if(_c_hasName($self->{esl_msa})) {
+    push(@{$gf_tag_AR}, "ID");
+    push(@{$gf_value_AR},  _c_getName($self->{esl_msa}));
+  }
+  if(_c_hasAccession($self->{esl_msa})) {
+    push(@{$gf_tag_AR}, "AC");
+    push(@{$gf_value_AR},  _c_getAccession($self->{esl_msa}));
+  }
+  if(_c_hasDesc($self->{esl_msa})) {
+    push(@{$gf_tag_AR}, "DE");
+    push(@{$gf_value_AR},  _c_getDesc($self->{esl_msa}));
+  }
+  if(_c_hasAuthor($self->{esl_msa})) {
+    push(@{$gf_tag_AR}, "AU");
+    push(@{$gf_value_AR},  _c_getAuthor($self->{esl_msa}));
+  }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 get_all_GF
 
   Title     : get_all_GF
@@ -3403,12 +3462,13 @@ sub capitalize_based_on_rf
 
 sub get_all_GF
 {
-  my ($self, $gfHR) = @_;
+  my ($self, $gf_tag_AR, $gf_value_AR) = @_;
 
   my $ngf = _c_get_gf_num($self->{esl_msa});
+  $self->get_special_GF($gf_tag_AR, $gf_value_AR);
   for(my $i = 0; $i < $ngf; $i++) { 
-    my $tag       = _c_get_gf_tag($self->{esl_msa}, $i);
-    $gfHR->{$tag} = _c_get_gf    ($self->{esl_msa}, $i);
+    push(@{$gf_tag_AR},  _c_get_gf_tag($self->{esl_msa}, $i));
+    push(@{$gf_value_AR}, _c_get_gf($self->{esl_msa}, $i));
   }
   return;
 }

@@ -1128,71 +1128,82 @@ float _c_average_sqlen(ESL_MSA *msa)
   return (_c_count_residues(msa) / msa->nseq);
 }
 
-
-/* Function:  _c_setDesc()
- * Incept:    EPN, Tue Mar 21 13:37:18 2017
- * Purpose:   Set description line of an MSA.
- * Returns:   eslOK on success, ! eslOK on failure.
+/* Function:  _c_has{Name,Accession,Desc,Author}
+ * Incept:    EPN, Tue Mar 21 10:21:33 2017
+ * Purpose:   Return 1 if MSA has {name,acc,desc,au} annotation.
+ * Returns:   1 if msa->{name,acc,desc,au} exists, else 0
  */
-int _c_setDesc(ESL_MSA *msa, char *value)
+int _c_hasName(ESL_MSA *msa)
 {
-  int    status;
-  status = esl_msa_SetDesc(msa, value, -1);
-  return status;
+  return (msa->name) ? 1 : 0;
+}
+int _c_hasAccession(ESL_MSA *msa)
+{
+  return (msa->acc) ? 1 : 0;
+}
+int _c_hasDesc(ESL_MSA *msa)
+{
+  return (msa->desc) ? 1 : 0;
+}
+int _c_hasAuthor(ESL_MSA *msa)
+{
+  return (msa->au) ? 1 : 0;
 }
 
-/* Function:  _c_setAccession()
- * Incept:    EPN, Tue Mar 21 13:38:11 2017
- * Purpose:   Set accession field of an MSA.
- * Returns:   eslOK on success, ! eslOK on failure.
+/* Function:  _c_get{Name,Accession,Desc,Author}
+ * Incept:    EPN, Tue Mar 21 10:21:33 2017
+ * Purpose:   Return msa->{name,acc,desc,au} annotation.
+ * Returns:   msa->{name,acc,desc,au} annotation if it exists, else fails
  */
+char *_c_getName(ESL_MSA *msa)
+{
+  if(msa->name) return msa->name;
+  croak("_c_getName: name does not exist");
+}
+char *_c_getAccession(ESL_MSA *msa)
+{
+  if(msa->acc) return msa->acc;
+  croak("_c_getAccession: acc does not exist");
+}
+char *_c_getDesc(ESL_MSA *msa)
+{
+  if(msa->desc) return msa->desc;
+  croak("_c_getDesc: desc does not exist");
+}
+char *_c_getAuthor(ESL_MSA *msa)
+{
+  if(msa->au) return msa->au;
+  croak("_c_getAuthor: au does not exist");
+}
+
+/* Function:  _c_set{Name,Accession,Desc,Author}
+ * Incept:    EPN, Tue Mar 21 10:21:33 2017
+ * Purpose:   Set {name,acc,description,author} line of an MSA
+ * Returns:   eslOK on success, ! eslOK on failure
+ */
+int _c_setName(ESL_MSA *msa, char *value)
+{
+  int    status;
+  status = esl_msa_SetName(msa, value, -1);
+  return status;
+}
 int _c_setAccession(ESL_MSA *msa, char *value)
 {
   int    status;
   status = esl_msa_SetAccession(msa, value, -1);
   return status;
 }
-
-/* Function:  _c_hasDesc()
- * Incept:    EPN, Tue Mar 21 10:21:33 2017
- * Purpose:   Return 1 if MSA has desc annotation.
- * Returns:   1 if msa->desc exists, else 0
- */
-int _c_hasDesc(ESL_MSA *msa)
+int _c_setDesc(ESL_MSA *msa, char *value)
 {
-  return (msa->desc) ? 1 : 0;
+  int    status;
+  status = esl_msa_SetDesc(msa, value, -1);
+  return status;
 }
-
-/* Function:  _c_hasAccession()
- * Incept:    EPN, Tue Mar 21 10:22:28 2017
- * Purpose:   Return 1 if MSA has accession.
- * Returns:   1 if msa->acc exists, else 0
- */
-int _c_hasAccession(ESL_MSA *msa)
+int _c_setAuthor(ESL_MSA *msa, char *value)
 {
-  return (msa->acc) ? 1 : 0;
-}
-
-/* Function:  _c_getDesc()
- * Incept:    EPN, Tue Mar 21 10:23:10 2017
- * Purpose:   Return MSA's desc if it exists, else croak.
- * Returns:   msa->desc if it exists, else croak
- */
-char *_c_getDesc(ESL_MSA *msa)
-{
-  if(msa->desc) return msa->desc;
-  croak("_c_getDesc: desc does not exist");
-}
-
-/* Function:  _c_getAccession()
- * Incept:    EPN, Tue Mar 21 10:24:31 2017
- * Purpose:   Return MSA's acc if it exists, else croak.
- * Returns:   msa->acc if it exists, else croak
- */
-char *_c_getAccession(ESL_MSA *msa)
-{
-  if(msa->acc) return msa->acc;
-  croak("_c_getAcc: desc does not exist");
+  int    status;
+  status = esl_msa_SetAuthor(msa, value, -1);
+  return status;
 }
 
 /* Function:  _c_addGF()
@@ -1206,6 +1217,19 @@ int _c_addGF(ESL_MSA *msa, char *tag, char *value)
   status = esl_msa_AddGF(msa, tag, -1, value, -1);
   return status;
 }
+
+/* Function:  _c_add_comment()
+ * Incept:    EPN, Tue Sep 17 13:13:32 2024
+ * Purpose:   Add a comment to MSA.
+ * Returns:   eslOK on success, ! eslOK on failure.
+ */
+int _c_add_comment(ESL_MSA *msa, char *value)
+{
+  int    status;
+  status = esl_msa_AddComment(msa, value, -1);
+  return status;
+}
+
 
 /* Function:  _c_addGC()
  * Incept:    EPN, Wed Feb  4 11:00:17 2015
