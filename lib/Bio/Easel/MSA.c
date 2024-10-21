@@ -358,16 +358,97 @@ int _c_has_ss_cons (ESL_MSA *msa)
   else             return 0;
 }
 
+/* Function:  _c_has_sa_cons()
+ * Incept:    EPN, Mon Sep 16 11:02:32 2024
+ * Synopsis:  Returns TRUE if msa->sa_cons is valid
+ * Returns:   Returns '1' if msa->sa_cons is non-NULL, else returns 0
+ */
+int _c_has_sa_cons (ESL_MSA *msa)
+{
+  if(msa->sa_cons) return 1;
+  else             return 0;
+}
+
+/* Function:  _c_has_pp_cons()
+ * Incept:    EPN, Mon Sep 16 11:02:45 2024
+ * Synopsis:  Returns TRUE if msa->pp_cons is valid
+ * Returns:   Returns '1' if msa->pp_cons is non-NULL, else returns 0
+ */
+int _c_has_pp_cons (ESL_MSA *msa)
+{
+  if(msa->pp_cons) return 1;
+  else             return 0;
+}
+
+/* Function:  _c_has_mm()
+ * Incept:    EPN, Mon Sep 16 11:02:58 2024
+ * Synopsis:  Returns TRUE if msa->mm is valid
+ * Returns:   Returns '1' if msa->mm is non-NULL, else returns 0
+ */
+int _c_has_mm (ESL_MSA *msa)
+{
+  if(msa->mm) return 1;
+  else        return 0;
+}
+
 /* Function:  _c_get_rf()
  * Incept:    EPN, Thu Nov 21 10:10:51 2013
  * Synopsis:  Returns msa->rf if non-NULL, else dies.
  *            Caller should have used _c_has_rf to verify it exists.
- * Returns:   msa->rf()
+ * Returns:   msa->rf
  */
 char *_c_get_rf (ESL_MSA *msa)
 {
   if(msa->rf == NULL) croak("_c_get_rf, but RF is NULL");
   return msa->rf;
+}
+
+/* Function:  _c_get_ss_cons()
+ * Incept:    EPN, Fri May 24 09:58:32 2013
+ * Synopsis:  Returns msa->ss_cons if non-NULL, else dies.
+ *            Caller should have used _c_has_ss_cons to verify it exists.
+ * Returns:   msa->ss_cons
+ */
+char *_c_get_ss_cons (ESL_MSA *msa)
+{
+  if(msa->ss_cons == NULL) croak("_c_get_ss_cons, but SS_cons is NULL");
+  return msa->ss_cons;
+}
+
+/* Function:  _c_get_sa_cons()
+ * Incept:    EPN, Mon Sep 16 11:04:23 2024
+ * Synopsis:  Returns msa->sa_cons if non-NULL, else dies.
+ *            Caller should have used _c_has_sa_cons to verify it exists.
+ * Returns:   msa->sa_cons
+*/
+char *_c_get_sa_cons (ESL_MSA *msa)
+{
+  if(msa->sa_cons == NULL) croak("_c_get_ss_cons, but SA_cons is NULL");
+  return msa->sa_cons;
+}
+
+/* Function:  _c_get_pp_cons()
+ * Incept:    EPN, Mon Sep 16 11:05:23 2024
+ * Synopsis:  Returns msa->pp_cons if non-NULL, else dies.
+ *            Caller should have used _c_has_pp_cons to verify it exists.
+ * Returns:   msa->pp_cons
+ */
+char *_c_get_pp_cons (ESL_MSA *msa)
+{
+  if(msa->pp_cons == NULL) croak("_c_get_ss_cons, but PP_cons is NULL");
+  return msa->pp_cons;
+}
+
+/* Function:  _c_get_mm()
+ * Incept:    EPN, Mon Sep 16 11:05:25 2024E
+ * Synopsis:  Returns msa->mm if non-NULL, else dies.
+ *            Caller should have used _c_has_mm to verify it exists.
+ * Returns:   msa->mm
+ */
+char *_c_get_mm (ESL_MSA *msa)
+{
+  if(msa->mm == NULL) croak("_c_get_mm, but MM is NULL");
+  return msa->mm;
 }
 
 /* Function:  _c_set_rf()
@@ -384,18 +465,6 @@ void _c_set_rf (ESL_MSA *msa, char *rfstr)
   esl_strdup(rfstr, rflen, &(msa->rf));
   return;
 }   
-
-/* Function:  _c_get_ss_cons()
- * Incept:    EPN, Fri May 24 09:58:32 2013
- * Synopsis:  Returns msa->ss_cons if non-NULL, else dies.
- *            Caller should have used _c_has_ss_cons to verify it exists.
- * Returns:   msa->ss_cons()
- */
-char *_c_get_ss_cons (ESL_MSA *msa)
-{
-  if(msa->ss_cons == NULL) croak("_c_get_ss_cons, but SS_cons is NULL");
-  return msa->ss_cons;
-}
 
 /* Function:  _c_set_ss_cons()
  * Incept:    EPN, Tue Feb 18 10:18:29 2014
@@ -415,6 +484,51 @@ void _c_set_ss_cons (ESL_MSA *msa, char *ss_cons_str, int do_full_wuss)
       croak("_c_set_ss_cons() problem converting SS_cons to full WUSS notation"); 
     }
   }
+  return;
+}   
+
+/* Function:  _c_set_sa_cons()
+ * Incept:    EPN, Mon Sep 16 11:07:05 2024
+ * Synopsis:  Sets msa->sa_cons
+ * Returns:   void
+ */
+void _c_set_sa_cons (ESL_MSA *msa, char *sa_cons_str)
+{
+  int sa_cons_len = strlen(sa_cons_str);
+  if(sa_cons_len != msa->alen) croak("_c_set_sa_cons() trying to set SA_CONS with string of incorrect length");
+  if(msa->sa_cons) free(msa->sa_cons);
+
+  esl_strdup(sa_cons_str, sa_cons_len, &(msa->sa_cons));
+  return;
+}   
+
+/* Function:  _c_set_pp_cons()
+ * Incept:    EPN, Mon Sep 16 11:18:34 2024
+ * Synopsis:  Sets msa->pp_cons
+ * Returns:   void
+ */
+void _c_set_pp_cons (ESL_MSA *msa, char *pp_cons_str)
+{
+  int pp_cons_len = strlen(pp_cons_str);
+  if(pp_cons_len != msa->alen) croak("_c_set_pp_cons() trying to set PP_CONS with string of incorrect length");
+  if(msa->pp_cons) free(msa->pp_cons);
+
+  esl_strdup(pp_cons_str, pp_cons_len, &(msa->pp_cons));
+  return;
+}   
+
+/* Function:  _c_set_mm()
+ * Incept:    EPN, Mon Sep 16 11:18:34 2024
+ * Synopsis:  Sets msa->mm
+ * Returns:   void
+ */
+void _c_set_mm (ESL_MSA *msa, char *mm_str)
+{
+  int mm_len = strlen(mm_str);
+  if(mm_len != msa->alen) croak("_c_set_mm() trying to set MM with string of incorrect length");
+  if(msa->mm) free(msa->mm);
+
+  esl_strdup(mm_str, mm_len, &(msa->mm));
   return;
 }   
 
@@ -1014,71 +1128,82 @@ float _c_average_sqlen(ESL_MSA *msa)
   return (_c_count_residues(msa) / msa->nseq);
 }
 
-
-/* Function:  _c_setDesc()
- * Incept:    EPN, Tue Mar 21 13:37:18 2017
- * Purpose:   Set description line of an MSA.
- * Returns:   eslOK on success, ! eslOK on failure.
+/* Function:  _c_has{Name,Accession,Desc,Author}
+ * Incept:    EPN, Tue Mar 21 10:21:33 2017
+ * Purpose:   Return 1 if MSA has {name,acc,desc,au} annotation.
+ * Returns:   1 if msa->{name,acc,desc,au} exists, else 0
  */
-int _c_setDesc(ESL_MSA *msa, char *value)
+int _c_hasName(ESL_MSA *msa)
 {
-  int    status;
-  status = esl_msa_SetDesc(msa, value, -1);
-  return status;
+  return (msa->name) ? 1 : 0;
+}
+int _c_hasAccession(ESL_MSA *msa)
+{
+  return (msa->acc) ? 1 : 0;
+}
+int _c_hasDesc(ESL_MSA *msa)
+{
+  return (msa->desc) ? 1 : 0;
+}
+int _c_hasAuthor(ESL_MSA *msa)
+{
+  return (msa->au) ? 1 : 0;
 }
 
-/* Function:  _c_setAccession()
- * Incept:    EPN, Tue Mar 21 13:38:11 2017
- * Purpose:   Set accession field of an MSA.
- * Returns:   eslOK on success, ! eslOK on failure.
+/* Function:  _c_get{Name,Accession,Desc,Author}
+ * Incept:    EPN, Tue Mar 21 10:21:33 2017
+ * Purpose:   Return msa->{name,acc,desc,au} annotation.
+ * Returns:   msa->{name,acc,desc,au} annotation if it exists, else fails
  */
+char *_c_getName(ESL_MSA *msa)
+{
+  if(msa->name) return msa->name;
+  croak("_c_getName: name does not exist");
+}
+char *_c_getAccession(ESL_MSA *msa)
+{
+  if(msa->acc) return msa->acc;
+  croak("_c_getAccession: acc does not exist");
+}
+char *_c_getDesc(ESL_MSA *msa)
+{
+  if(msa->desc) return msa->desc;
+  croak("_c_getDesc: desc does not exist");
+}
+char *_c_getAuthor(ESL_MSA *msa)
+{
+  if(msa->au) return msa->au;
+  croak("_c_getAuthor: au does not exist");
+}
+
+/* Function:  _c_set{Name,Accession,Desc,Author}
+ * Incept:    EPN, Tue Mar 21 10:21:33 2017
+ * Purpose:   Set {name,acc,description,author} line of an MSA
+ * Returns:   eslOK on success, ! eslOK on failure
+ */
+int _c_setName(ESL_MSA *msa, char *value)
+{
+  int    status;
+  status = esl_msa_SetName(msa, value, -1);
+  return status;
+}
 int _c_setAccession(ESL_MSA *msa, char *value)
 {
   int    status;
   status = esl_msa_SetAccession(msa, value, -1);
   return status;
 }
-
-/* Function:  _c_hasDesc()
- * Incept:    EPN, Tue Mar 21 10:21:33 2017
- * Purpose:   Return 1 if MSA has desc annotation.
- * Returns:   1 if msa->desc exists, else 0
- */
-int _c_hasDesc(ESL_MSA *msa)
+int _c_setDesc(ESL_MSA *msa, char *value)
 {
-  return (msa->desc) ? 1 : 0;
+  int    status;
+  status = esl_msa_SetDesc(msa, value, -1);
+  return status;
 }
-
-/* Function:  _c_hasAccession()
- * Incept:    EPN, Tue Mar 21 10:22:28 2017
- * Purpose:   Return 1 if MSA has accession.
- * Returns:   1 if msa->acc exists, else 0
- */
-int _c_hasAccession(ESL_MSA *msa)
+int _c_setAuthor(ESL_MSA *msa, char *value)
 {
-  return (msa->acc) ? 1 : 0;
-}
-
-/* Function:  _c_getDesc()
- * Incept:    EPN, Tue Mar 21 10:23:10 2017
- * Purpose:   Return MSA's desc if it exists, else croak.
- * Returns:   msa->desc if it exists, else croak
- */
-char *_c_getDesc(ESL_MSA *msa)
-{
-  if(msa->desc) return msa->desc;
-  croak("_c_getDesc: desc does not exist");
-}
-
-/* Function:  _c_getAccession()
- * Incept:    EPN, Tue Mar 21 10:24:31 2017
- * Purpose:   Return MSA's acc if it exists, else croak.
- * Returns:   msa->acc if it exists, else croak
- */
-char *_c_getAccession(ESL_MSA *msa)
-{
-  if(msa->acc) return msa->acc;
-  croak("_c_getAcc: desc does not exist");
+  int    status;
+  status = esl_msa_SetAuthor(msa, value, -1);
+  return status;
 }
 
 /* Function:  _c_addGF()
@@ -1092,6 +1217,19 @@ int _c_addGF(ESL_MSA *msa, char *tag, char *value)
   status = esl_msa_AddGF(msa, tag, -1, value, -1);
   return status;
 }
+
+/* Function:  _c_add_comment()
+ * Incept:    EPN, Tue Sep 17 13:13:32 2024
+ * Purpose:   Add a comment to MSA.
+ * Returns:   eslOK on success, ! eslOK on failure.
+ */
+int _c_add_comment(ESL_MSA *msa, char *value)
+{
+  int    status;
+  status = esl_msa_AddComment(msa, value, -1);
+  return status;
+}
+
 
 /* Function:  _c_addGC()
  * Incept:    EPN, Wed Feb  4 11:00:17 2015
@@ -2858,6 +2996,145 @@ char *_c_most_informative_sequence(ESL_MSA *msa, float gapthresh, int use_weight
   return NULL; /* not reached */
 }
 
+/* Function:  _c_consensus_iupac_sequence()
+ * Incept:    EPN, Wed Sep 11 12:23:50 2024
+ * Synopsis:  Calculate the consensus sequence using IUPAC (possibly ambiguous) nt.
+ *            Similar to most_informative_sequence() but uses different rules 
+ *            (explained above) to determine consensus sequence. Also returns
+ *            fraction of sequences that the IUPAC code 'covers'.
+ * Args:      msa: the alignment
+ *            thresh: fraction of (possibly weighted) seqs IUPAC char should cover
+ *                    e.g if 0.43, and A=0.4, C=0.45, G=0.1, U=0.05, nt is C
+ *                    if 0.80, and A=0.4, C=0.45, G=0.1, U=0.05, nt is M
+ *            uc_thresh: [0..1] fraction of sequences that IUPAC nt must cover for it
+ *                       to be upper case, should be > $thresh but this is not enforced
+ *            use_rf: '1' to set consensus sequence to '.' for gap RF positions (die if RF is null)
+ *                    '0' calculate consensus IUPAC characters for all positions
+ *            use_weights: '1' to use weights, '0' not to
+ * Returns:   the 'most consensus IUPAC sequence' calculated here.
+ * Dies:      if MSA is NOT digitized, or if use_rf is '1' and RF is invalid or
+ *            if use_weights is '1' and weights are invalid
+ */
+void _c_consensus_iupac_sequence(ESL_MSA *msa, float thresh, float uc_thresh, int use_rf, int use_weights)
+{
+  Inline_Stack_Vars;
+
+  int        status;             /* Easel status */
+  int        i;                  /* counter over sequences */
+  int        a, a2;              /* counters over alphabet indices (residues) */
+  int        apos;               /* alignment position counter [0..alen-1] and [0..rflen-1], respectively */
+  double   **abcAA       = NULL; /* [0..apos..msa->alen-1][0..a..abc->K]: count of nt 'a' in column 'apos', a==abc->K are gaps, missing residues or nonresidues */
+  char      *cons_seq    = NULL; /* the most informative sequence, allocated below */
+  float     *cons_fractA = NULL; /* [0..apos..msa->alen-1] fraction of sequences covered by cons_seq[apos] */
+  int       *usedA       = NULL; /* [0..a..abc->K-1] usedA[a] is '1' if nt 'a' is used in the consensus seq for current column */
+  float      seen = 0.;          /* fraction of seqs covered by nt in usedA */
+  int        nadded;             /* number of nt added in usedA */
+  int        amatch;             /* degenerate residue index that matches current column */
+  int        argmax;             /* index of max frequency nt remaining */
+  int        found_mismatch;     /* set to '1' when we found a mismatch for current column and candidate degenerate residue */
+  float      seqwt = 0.;         /* weight of current sequence, always 1.0 if use_weights == FALSE */
+  
+  if(! (msa->flags & eslMSA_DIGITAL)) croak("_c_consensus_iupac_sequence() contract violation, MSA is not digitized");
+  if((! (msa->flags & eslMSA_HASWGTS)) && (use_weights)) croak("_c_consensus_iupac_sequence() trying to use weights, but they're not valid in the msa");
+  if((use_rf) && (msa->rf == NULL)) croak("_c_consensus_iupac_sequence() trying to use RF, but it is doesn't exist in the msa");
+    
+  /* allocate and initialize */
+  ESL_ALLOC(abcAA,       sizeof(double *)  * msa->alen); 
+  for(apos = 0; apos < msa->alen; apos++) { 
+    ESL_ALLOC(abcAA[apos], sizeof(double) * (msa->abc->K+1));
+    esl_vec_DSet(abcAA[apos], (msa->abc->K+1), 0.);
+  }
+  ESL_ALLOC(cons_seq, sizeof(char) * (msa->alen+1)); 
+  cons_seq[msa->alen] = '\0';
+  ESL_ALLOC(cons_fractA, sizeof(float) * (msa->alen+1)); 
+  esl_vec_FSet(cons_fractA, msa->alen, 0.);
+  ESL_ALLOC(usedA, sizeof(int) * msa->abc->K);
+  
+  /* compile counts */
+  for(i = 0; i < msa->nseq; i++) { 
+    seqwt = (use_weights) ? msa->wgt[i] : 1.0;
+    for(apos = 0; apos < msa->alen; apos++) { 
+      if((status = esl_abc_DCount(msa->abc, abcAA[apos], msa->ax[i][apos+1], seqwt)) != eslOK) croak("problem counting residue %d of seq %d", apos, i);
+    }
+  }
+
+  /* determine the (possibly degenerate) residue at each position that covers 'thresh' fraction of the (possibly weighted) sequences */
+  for(apos = 0; apos < msa->alen; apos++) { 
+    if((! use_rf) || (strchr("-_.~", msa->rf[apos]) == NULL)) { /* ! use_rf OR nongap RF character */
+      amatch = -1; /* this is set to a valid a [0..msa->abc->Kp-3] when we find it, and acts as a flag if we don't find one (which is an error) */
+      esl_vec_ISet(usedA, msa->abc->K, 0);
+      esl_vec_DNorm(abcAA[apos], 4);
+      nadded = 0; /* this should not exceed K */
+      seen = 0.;
+      while((seen < thresh) && (nadded < msa->abc->K)) {
+        seen += esl_vec_DMax(abcAA[apos], 4);
+        argmax = esl_vec_DArgMax(abcAA[apos], 4);
+        usedA[argmax] = 1;
+        cons_fractA[apos] += abcAA[apos][argmax];
+        abcAA[apos][argmax] = 0.; /* so next FMax call finds next highest value */
+        nadded++;
+      }
+      for(a = 0; a <= msa->abc->Kp-3; a++) { /* for each nucleotide, including degenerate ones */
+        found_mismatch = 0;
+        for(a2 = 0; a2 < msa->abc->K; a2++) {
+          if(msa->abc->degen[a][a2] != usedA[a2]) { /* a non-match */
+            found_mismatch = 1;
+          }
+        }
+        if(! found_mismatch) { 
+          amatch = a;
+          a = msa->abc->Kp; /* breaks us out of 'for(a = 0)' loop */
+        }
+      }
+      if(amatch == -1) { croak("unable to find a matching degenerate residue for position %d\n", apos+1); }
+      cons_seq[apos] = msa->abc->sym[amatch];
+      if(cons_fractA[apos] < uc_thresh) cons_seq[apos] = tolower(cons_seq[apos]);
+    }
+    else { /* use_rf is 1 and this is a gap in RF */
+      cons_seq[apos] = msa->abc->sym[msa->abc->K]; /* gap char */
+      cons_fractA[apos] = 0.;
+    }
+  }
+
+  /* clean up and return */
+  if(abcAA) {
+    for(apos = 0; apos < msa->alen; apos++) { 
+      if(abcAA[apos]) { 
+        free(abcAA[apos]);
+      }
+    }
+  }
+  free(abcAA);
+  if(usedA) free(usedA);
+
+  Inline_Stack_Reset;
+  for(apos = 0; apos < msa->alen; apos++) { 
+    Inline_Stack_Push(newSVnv(cons_seq[apos])); 
+  }
+  for(apos = 0; apos < msa->alen; apos++) { 
+    Inline_Stack_Push(newSVnv(cons_fractA[apos])); 
+  }
+  if(cons_fractA) free(cons_fractA);
+  free(cons_seq);
+  Inline_Stack_Done;
+  Inline_Stack_Return(2 * msa->alen);
+ 
+ ERROR:
+  if(abcAA) {
+    for(apos = 0; apos < msa->alen; apos++) { 
+      if(abcAA[apos]) { 
+        free(abcAA[apos]);
+      }
+    }
+  }
+  free(abcAA);
+  if(usedA)       free(usedA);
+  if(cons_seq)    free(cons_seq);
+  if(cons_fractA) free(cons_fractA);
+  croak("out of memory in _c_consensus_iupac_sequence()");
+  return; /* NOT REACHED */
+}
+
 /* Function:  _c_map_rfpos_to_apos()
  * Incept:    EPN, Mon May 19 11:00:49 2014
  * Synopsis:  Given an MSA, determine the alignment position of each nongap RF position
@@ -3179,7 +3456,73 @@ void _c_pos_conservation(ESL_MSA *msa, int use_weights)
   croak("ERROR: _c_pos_conservation(), out of memory");
   return;
 }
-    
+
+/* Function:  _c_pos_gap()
+ * Incept:    EPN, Fri Sep 13 10:15:33 2024
+ * Synopsis:  Calculate and return the fraction of gaps at each alignment position.
+ * Args:      msa: the alignment
+ * Returns:   the fraction of gaps (as an array in Perl's return stack) 
+ */
+void _c_pos_gap(ESL_MSA *msa, int use_weights)
+{
+  Inline_Stack_Vars;
+
+  int        status;           /* error status */
+  int        apos;             /* counter over alignment positions */
+  int        i;                /* counter over sequences */
+  int        a;                /* counter over residues in an alphabet */
+  float      seqwt = 0.;       /* weight of current sequence, always 1.0 if use_weights == FALSE */
+  double   **abcAA    = NULL;  /* [0..apos..msa->alen-1][0..a..abc->K]: count of nt 'a' in column 'apos', a==abc->K are gaps, missing residues or nonresidues */
+  double    *gapA     = NULL;  /* [0..apos..msa->alen-1] fraction of gaps of column apos */
+
+  if(! (msa->flags & eslMSA_DIGITAL)) croak("_c_pos_gaps() contract violation, MSA is not digitized");
+  if((! (msa->flags & eslMSA_HASWGTS)) && (use_weights)) croak("_c_pos_gaps() trying to use weights, but they're not valid in the msa");
+
+  /* allocate and initialize */
+  ESL_ALLOC(abcAA, sizeof(double *)  * msa->alen); 
+  for(apos = 0; apos < msa->alen; apos++) { 
+    ESL_ALLOC(abcAA[apos], sizeof(double) * (msa->abc->K+1));
+    esl_vec_DSet(abcAA[apos], (msa->abc->K+1), 0.);
+  }
+  ESL_ALLOC(gapA, sizeof(double) * msa->alen);
+  esl_vec_DSet(gapA, msa->alen, 0.);
+
+  /* compile counts */
+  for(i = 0; i < msa->nseq; i++) { 
+    seqwt = (use_weights) ? msa->wgt[i] : 1.0;
+    for(apos = 0; apos < msa->alen; apos++) { 
+      if((status = esl_abc_DCount(msa->abc, abcAA[apos], msa->ax[i][apos+1], seqwt)) != eslOK) croak("problem counting residue %d of seq %d", apos, i);
+    }
+  }
+
+  /* calculate sequence conservation, and fill return array */
+  Inline_Stack_Reset;
+  for(apos = 0; apos < msa->alen; apos++) { 
+    esl_vec_DNorm(abcAA[apos], msa->abc->K+1); /* note: normalize all msa->abc->K+1 values (including gaps) this differs from what we did in _c_pos_entropy() */
+    gapA[apos] = abcAA[apos][msa->abc->K];
+    Inline_Stack_Push(newSVnv(gapA[apos])); 
+  }
+  Inline_Stack_Done;
+  Inline_Stack_Return(msa->alen);
+
+  /* clean up and return */
+  if(abcAA) { 
+    for(i = 0; i < msa->nseq; i++) { if(abcAA[i]) free(abcAA[i]); }
+    free(abcAA);
+  }
+  if(gapA)  free(gapA);
+  return;
+
+ ERROR:
+  if(abcAA) { 
+    for(i = 0; i < msa->nseq; i++) { if(abcAA[i]) free(abcAA[i]); }
+    free(abcAA);
+  }
+  if(gapA)  free(gapA);
+  croak("ERROR: _c_pos_gaps(), out of memory");
+  return;
+}
+
 /* Function:  _c_remove_gap_rf_basepairs()
  * Incept:    EPN, Fri Jan 29 16:27:32 2016
  * Synposis:  Remove any basepair (i,j) in msa->ss_cons for which 

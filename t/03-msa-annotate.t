@@ -1,16 +1,20 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 91;
+use Test::More tests => 107;
+
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
 }
 
 my ($alnfile, $line, $msa, $outfile, $has_rf, $alnfile2, $has_gc, $test_gc, $foo_gc, $tagidx, $tag, $tagnum);
+my ($alnfile3, $has_sa_cons, $has_pp_cons, $has_mm, $sa_cons, $pp_cons, $mm, $set_sa_cons, $set_pp_cons, $set_mm);
 my ($pp_alnfile, $grstr1, $grstr2, $grstr3, $has_gr, $test_gr);
 my @gcA  = ();
 my @gcA2 = ();
 $alnfile = "./t/data/test.sto";
+$alnfile2 = "./t/data/test.rf.sto";
+$alnfile3 = "./t/data/test.gc.sto";
 $pp_alnfile = "./t/data/test-pp.sto";
 
 # do all tests twice, once in digital and once in text mode
@@ -68,7 +72,6 @@ for(my $mode = 0; $mode <= 1; $mode++) {
    is($has_rf, "0", "has_rf correctly noted absence of RF annotation (mode $mode)");
    undef $msa;
 
-   $alnfile2 = "./t/data/test.rf.sto";
    $msa = Bio::Easel::MSA->new({
      fileLocation => $alnfile2, 
      forceText    => $mode,
@@ -83,9 +86,6 @@ for(my $mode = 0; $mode <= 1; $mode++) {
 
   $has_gc = $msa->hasGC("SS_cons");
   is($has_gc, "1", "hasGC correctly notes presence of SS_cons annotation");
-
-  $has_gc = $msa->hasGC("PP_cons");
-  is($has_gc, "0", "hasGC correctly notes absence of PP_cons annotation");
 
   $has_gc = $msa->hasGC("test");
   is($has_gc, "0", "hasGC correctly notes absence of GC annotation");
@@ -202,4 +202,50 @@ for(my $mode = 0; $mode <= 1; $mode++) {
 
   $test_gr = $pp_msa->getGR_given_tagidx_sqidx(2, 2);
   is($test_gr, "this-is-a-test-of-GR-annotation", "getGR_given_tagidx_sqidx correctly gets GR annotation for seq 3 tag 3");
+
+   # test {has,get,set}_{sa_cons,pp_cons,mm}
+   $alnfile3 = "./t/data/test.gc.sto";
+   $msa = Bio::Easel::MSA->new({
+     fileLocation => $alnfile3, 
+     forceText    => $mode,
+   });
+
+   # has_
+   $has_sa_cons = $msa->has_sa_cons;
+   is($has_sa_cons, "1", "has_sa_cons correctly noted presence of SA_cons annotation (mode $mode)");
+
+   $has_pp_cons = $msa->has_pp_cons;
+   is($has_pp_cons, "1", "has_pp_cons correctly noted presence of PP_cons annotation (mode $mode)");
+
+   $has_mm = $msa->has_mm;
+   is($has_mm, "1", "has_mm correctly noted presence of MM annotation (mode $mode)");
+
+   # get_
+   $sa_cons = $msa->get_sa_cons;
+   is($sa_cons, ".abcdefghijklmonpqr.stu.vwx.", "get_sa_cons correctly fetched SA_cons");
+
+   $pp_cons = $msa->get_pp_cons;
+   is($pp_cons, ".**************8988.***.333.", "get_pp_cons correctly fetched PP_cons");
+
+   $mm = $msa->get_mm;
+   is($mm, ".111111111111111111.000.111.", "get_mm correctly fetched MM");
+
+   # set_
+   $set_sa_cons = ".zyxwvutsrqpnomlkji.hgf.edc.";
+   $msa->set_sa_cons($set_sa_cons);
+   $sa_cons = $msa->get_sa_cons();
+   is($sa_cons, $set_sa_cons, "set_sa_cons correctly set SA_cons");
+
+   $set_pp_cons = "0000000000000000000000000000";
+
+   $msa->set_pp_cons($set_pp_cons);
+   $pp_cons = $msa->get_pp_cons();
+   is($pp_cons, $set_pp_cons, "set_pp_cons correctly set PP_cons");
+
+   $set_mm = "0000000000010000000000000000";
+   $msa->set_mm($set_mm);
+   $mm = $msa->get_mm();
+   is($mm, $set_mm, "set_mm_correctly set MM");
+
+   undef $msa;
 }

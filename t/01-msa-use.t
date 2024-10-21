@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 287;
+use Test::More tests => 301;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -27,6 +27,8 @@ my @keepmeA;
 my @usemeA;
 my @orderA;
 my $rawmsa;
+my @rf2amapA = ();
+my @a2rfmapA = ();
 
 # first test new without a forcetext value
 $msa1 = Bio::Easel::MSA->new({
@@ -323,13 +325,23 @@ for($mode = 0; $mode <= 1; $mode++) {
   is($nends, "2", "write_msa appending seems to work (mode: $mode)");
   unlink $outfile;
 
-  # test remove_rf_gap_columns
+  # test get_rf_map
   undef $msa1;
   $msa1 = Bio::Easel::MSA->new({
      fileLocation => $rf_alnfile, 
      forceText    => $mode,
   });
   isa_ok($msa1, "Bio::Easel::MSA");
+  $msa1->get_rf_map(\@rf2amapA, \@a2rfmapA, undef);
+  is($a2rfmapA[1],  "-1", "get_rf_map() seems to work 1 (mode: $mode)");
+  is($rf2amapA[1],   "2", "get_rf_map() seems to work 2 (mode: $mode)");
+  is($rf2amapA[19], "21", "get_rf_map() seems to work 3 (mode: $mode)");
+  is($a2rfmapA[21], "19", "get_rf_map() seems to work 4 (mode: $mode)");
+  is($rf2amapA[24], "27", "get_rf_map() seems to work 5 (mode: $mode)");
+  is($a2rfmapA[27], "24", "get_rf_map() seems to work 6 (mode: $mode)");
+  is($a2rfmapA[28], "-1", "get_rf_map() seems to work 7 (mode: $mode)");
+
+  # test remove_rf_gap_columns
   $msa1->remove_rf_gap_columns();
   $sub_alen = $msa1->alen;
   is($sub_alen, "24", "remove_rf_gap_columns worked (mode $mode)");
@@ -765,4 +777,7 @@ is($ppct,  15, "get_ppstr_avg seems to be working.");
 $ppavg = int(($ppavg * 100) + 0.5);
 is($ppavg, 57, "get_ppstr_avg seems to be working.");
 is($ppct,  15, "get_ppstr_avg seems to be working.");
+
+################################################
+
 
