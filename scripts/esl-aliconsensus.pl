@@ -33,6 +33,9 @@ $usage .= "\t\t--consthr1 <x> : threshold for fraction of seqs that must be cove
 $usage .= "\t\t--consthr2 <x> : threshold for making consensus iupac nt uppercase [df: 0.75]\n";
 $usage .= "\t\t--consrfonly   : for CONS annotation, mark gap RF positions as gaps\n";
 $usage .= "\t\t--cons2rf      : rewrite existing RF annotation as the CONS annotation (requires --consrfonly)\n";
+$usage .= "\t\t--consgap      : for CONS annotation, mark positions with > <x> (from --consfgap) fraction gaps as 'x'\n";
+$usage .= "\t\t--consfgap <x> : with --consgap, set fractional gap threshold to <x> [df: 0.05]\n";
+$usage .= "\t\t--conscgap <s> : with --consgap, set character for positions above gap threhsold to <s> [df: 'x']\n";
 $usage .= "\t\t--nocons       : do not add GC CONS consensus sequence annotation [df: do add it]\n";
 $usage .= "\t\t--noconsfract  : add GC CONSFRACT consensus sequence fraction annotation\n";
 $usage .= "\t\t--gapfract     : add GC GAPFRACT fraction of seqs that are gaps annotation\n";
@@ -47,6 +50,9 @@ my $consthr1       = 0.5;
 my $consthr2       = 0.75; 
 my $do_consrfonly  = 0;
 my $do_cons2rf     = 0;
+my $do_consgap     = 0;
+my $consfgap       = 0.05;
+my $conscgap       = "x";
 my $do_nocons      = 0;
 my $do_noconsfract = 0;
 my $do_gapfract    = 0;
@@ -61,6 +67,10 @@ my $cmdline = "esl-aliconsensus.pl ". join(" ", @ARGV);
 &GetOptions( "consthr1=s"  => \$consthr1, 
              "consthr2=s"  => \$consthr2, 
              "consrfonly"  => \$do_consrfonly, 
+             "cons2rf"     => \$do_cons2rf, 
+             "consgap"     => \$do_consgap,
+             "consfgap=s"  => \$consfgap,
+             "conscgap=s"  => \$conscgap,
              "cons2rf"     => \$do_cons2rf, 
              "nocons"      => \$do_nocons,
              "noconsfract" => \$do_nocons,
@@ -77,7 +87,8 @@ if($do_describe) {
   print("CONS: most specific IUPAC nt that explains <y> > $consthr1 (changeable to <x> with \"--consthr1 <x>\")\n");
   print("      if lower case, then <y> < $consthr2 (changeable to <y> with \"--consthr2 <y>\")\n");
   print("      If --consrfonly and alignment has RF annotation, gap RF positions will always be gaps\n");
-  printf("     If --cons2rf, the existing RF annotation will be rewritten as the CONS annotation\n");
+  print("      If --cons2rf, the existing RF annotation will be rewritten as the CONS annotation\n");
+  print("      If --consgap, if fraction of gaps is >= $consfgap (from --consfgap), value will be $conscgap (from --conscgap)\n");
   print("\n");
   print("CONSFRACT: <y> value for CONS annotation, encoded as explained below\n");
   print("\n");
@@ -101,6 +112,9 @@ if($do_describe) {
   print("     '2': [0.15..0.25)\n");
   print("     '1': [0.05..0.15)\n");
   print("     '0': [0.00..0.05)\n");
+  print("\n");
+  print("As a special case, if --consgap used and CONS value is $conscgap CONSFRACT value will\n");
+  print("correspond to fraction of gaps, not <y> value from CONS definition (explained above).\n");
   print("\n");
   exit 0;
 }
@@ -126,10 +140,26 @@ if($do_nocons && $do_cons2rf) {
 if($do_nocons && $do_consrfonly) {
   die "ERROR --consrfonly does not make sense in combination with --nocons";
 }
+if($do_nocons && $do_consgap) { 
+  die "ERROR --consgap does not make sense in combination with --nocons";
+}
   
 # check that if --cons2rf is used, --consrfonly is also used
 if($do_cons2rf && (! $do_consrfonly)) {
   die "ERROR with --cons2rf, --consrfonly must also be used";
+}
+  
+# check <x> from --consfgap <x> is between 0.0 and 1.0
+if($consfgap < 0. || $consfgap > 1.0) { 
+  die "ERROR with --consfgap <x>, <x> must be between 0.0 and 1.0";
+}
+
+# check <s> from --conscgap <s> is a single character, and isn't a gap char
+if(length($conscgap) != 1) { 
+  die "ERROR with --conscgap <s>, <s> must be a single character";
+}
+if($conscgap =~ /[\.\-\~]/) { 
+  die "ERROR with --conscgap <s>, <s> can't be '.', '-', or '~'";
 }
 
 # make sure MSA has RF if we need it
@@ -139,6 +169,7 @@ if($do_consrfonly || $do_gaprf) {
   }
 }
 
+my @gap_fract_A = (); # filled if --consgap or --gapfract
 my @gc_added_A = ();
 # determine and add CONS and CONSFRACT annotation 
 if(! $do_nocons) { 
@@ -147,6 +178,10 @@ if(! $do_nocons) {
   my $cons_seq = $msa->consensus_iupac_sequence($consthr1, $consthr2, $do_consrfonly, $do_weights, \@cons_fract_A);
   my @cons_seq_A = split("", $cons_seq);
   #printf("$cons_seq\n");
+
+  if($do_consgap) {
+    @gap_fract_A = $msa->pos_gap($do_weights);
+  }
   
   # create the @cons_fract_A
   for(my $i = 0; $i < $msa->alen; $i++) {
@@ -155,7 +190,14 @@ if(! $do_nocons) {
       $cons_fract_code_A[$i] = "."; # use '.' for RF gaps
     }
     else { 
-      $cons_fract_code_A[$i] = frequency_to_annotation_code($cons_fract_A[$i]);
+      if(($do_consgap) && ($gap_fract_A[$i] >= $consfgap)) {
+          $cons_seq_A[$i] = $conscgap;
+          # use gap fraction not cons_fract for determining cons_fract code
+          $cons_fract_code_A[$i] = frequency_to_annotation_code($gap_fract_A[$i]);
+      }
+      else { 
+        $cons_fract_code_A[$i] = frequency_to_annotation_code($cons_fract_A[$i]);
+      }
     }
   }
   if($do_cons2rf) {
@@ -173,8 +215,9 @@ if(! $do_nocons) {
 
 # determine and add GAPFRACT annotation
 if($do_gapfract) {
-  my @gap_fract_A = ();
-  @gap_fract_A = $msa->pos_gap($do_weights);
+  if(scalar(@gap_fract_A) == 0) {
+    @gap_fract_A = $msa->pos_gap($do_weights);
+  }
   my @gap_fract_code_A = ();
   for(my $i = 0; $i < $msa->alen; $i++) {
     $gap_fract_code_A[$i] = frequency_to_annotation_code($gap_fract_A[$i]);
