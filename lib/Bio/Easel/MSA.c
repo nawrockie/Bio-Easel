@@ -3381,6 +3381,140 @@ void _c_pos_entropy(ESL_MSA *msa, int use_weights)
   return;
 }
 
+/* Function:  _c_pos_relentropy()
+ * Incept:    EPN, Tue May 20 10:45:41 2014
+ * Synopsis:  Calculate and return the relative entropy at each alignment position.
+ * Args:      msa:         the alignment
+ *            use_weights:  '1' to use weights in msa, '0' not to
+ *            gaps_as_miss: '1' to treat gaps as missing data and count each
+ *                          gap as background probability of each nt
+ *                          '0' to ignore gaps
+ *            use_bgcounts: '1' to use bgcountsAR, '0' not to, need this because
+ *                          we can't check that bgcountsAR is NULL 
+ *            bg_countsAR:  ref to array with count vector with background counts
+ *                          must be length abc->K, these will be converted to frequencies
+ *                          (we don't pass in a float vector because I don't know how 
+ *                          to convert a float vector from a perl array to C array).
+ *                          If <use_bgcounts> is 0, we get background frequencies from the msa.
+ * Returns:   the relative entropy at each aln position (as an array in Perl's 
+ *            return stack) 
+ */
+void _c_pos_relentropy(ESL_MSA *msa, int use_weights, int gaps_as_miss, int use_bgcounts, AV *bgcountsAR)
+{
+  Inline_Stack_Vars;
+
+  int        status;           /* error status */
+  int        apos;             /* counter over alignment positions */
+  int        i;                /* counter over sequences */
+  int        a = 0;            /* counter over residues in an alphabet */
+  float      seqwt = 0.;       /* weight of current sequence, always 1.0 if use_weights == FALSE */
+  double   **abcAA    = NULL;  /* [0..apos..msa->alen-1][0..a..abc->K]: count of nt 'a' in column 'apos', a==abc->K are gaps, missing residues or nonresidues */
+  double    *relentA  = NULL;  /* [0..apos..msa->alen-1] relative entropy of column apos */
+  double    *qA       = NULL;  /* [0..a..abc->K-1]: background freqency of count of nt 'a' */
+  int       *qintA    = NULL;  /* [0..a..abc->K-1]: background count of nt 'a', only used if $use_bgcounts is 1 */
+
+  if(! (msa->flags & eslMSA_DIGITAL)) croak("_c_pos_relentropy() contract violation, MSA is not digitized");
+  if((! (msa->flags & eslMSA_HASWGTS)) && (use_weights)) croak("_c_pos_relentropy() trying to use weights, but they're not valid in the msa");
+
+  /* entropy (eqn 11.10, BSA book; Durbin, Eddy, Krogh, Mitchison 1998) 
+   * - sum_i P(x_i) log (P(x_i)/Q(x_i)
+   * where i ranges over each residue in the alphabet (e.g. nucleotides) 
+   * and Q is the background distribution, derived from bgcountsAR
+   * or (if that is NULL) as the background distribution of the MSA
+   */
+
+  /* allocate and initialize */
+  ESL_ALLOC(abcAA, sizeof(double *)  * msa->alen); 
+  for(apos = 0; apos < msa->alen; apos++) { 
+    ESL_ALLOC(abcAA[apos], sizeof(double) * (msa->abc->K+1));
+    esl_vec_DSet(abcAA[apos], (msa->abc->K+1), 0.);
+  }
+  ESL_ALLOC(relentA, sizeof(double) * msa->alen);
+  esl_vec_DSet(relentA, msa->alen, 0.);
+  ESL_ALLOC(qA, sizeof(double) * msa->abc->K);
+  esl_vec_DSet(qA, msa->abc->K, 0.);
+
+  /* compile counts */
+  for(i = 0; i < msa->nseq; i++) { 
+    seqwt = (use_weights) ? msa->wgt[i] : 1.0;
+    for(apos = 0; apos < msa->alen; apos++) { 
+      if((status = esl_abc_DCount(msa->abc, abcAA[apos], msa->ax[i][apos+1], seqwt)) != eslOK) croak("problem counting residue %d of seq %d", apos, i);
+    }
+  }
+
+  /* copy the perl array into the C one */
+  if(use_bgcounts) { 
+    ESL_ALLOC(qintA, sizeof(int) * msa->abc->K);
+    esl_vec_ISet(qintA, msa->abc->K, 0);
+    _c_int_copy_array_perl_to_c(bgcountsAR, qintA, msa->abc->K);
+    for(a = 0; a < msa->abc->K; a++) {
+      qA[a] = (double) qintA[a];
+    }
+  }
+  else {
+    for(apos = 0; apos < msa->alen; apos++) { 
+      for(a = 0; a < msa->abc->K; a++) {
+        qA[a] += abcAA[apos][a];
+      }
+    }
+  }
+  esl_vec_DNorm(qA, msa->abc->K);
+  esl_vec_DDump(stderr, qA, msa->abc->K, "acgu");
+  
+  /* calculate relative entropy, and fill return array */
+  Inline_Stack_Reset;
+  for(apos = 0; apos < msa->alen; apos++) { 
+    /*esl_vec_DDump(stderr, abcAA[apos], msa->abc->K+1, "abcAA"); */
+    if(gaps_as_miss) { 
+      esl_vec_DNorm(abcAA[apos], msa->abc->K+1); /* note: normalize including gaps so we can treat gaps as missing data and 
+                                                  * spread their counts weighted by qA background */
+      if(abcAA[apos][msa->abc->K] > eslSMALLX1) {
+        for(a = 0; a < msa->abc->K; a++) { 
+          abcAA[apos][a] += (qA[a] * abcAA[apos][msa->abc->K]);
+        }
+        /* shouldn't be necessary to normalize again, but do it anyway */
+        esl_vec_DNorm(abcAA[apos], msa->abc->K); 
+      }
+    }
+    else {  /* gaps_as_miss is 0 */
+      esl_vec_DNorm(abcAA[apos], msa->abc->K); /* note: only normalize the first msa->abc->K values, this will ignore gaps and normalize nongap counts */
+    }
+    for(a = 0; a < msa->abc->K; a++) { 
+      if(abcAA[apos][a] > eslSMALLX1) { /* above zero */
+        relentA[apos] += abcAA[apos][a] * (log(abcAA[apos][a] / qA[a]) / log(2)); /* convert natural log to log base 2 */
+        /*fprintf(stderr, "\tapos %3d a %3d added %5.3f to relentA[apos], new value: %5.3f\n", apos, a, abcAA[apos][a] * (log(abcAA[apos][a] / qA[a]) / log(2)), relentA[apos]);*/
+      }
+    }
+    fprintf(stderr, "relentA[%2d]: %.3f\n", apos, relentA[apos]);
+    Inline_Stack_Push(newSVnv(relentA[apos])); 
+  }
+  Inline_Stack_Done;
+  Inline_Stack_Return(msa->alen);
+
+  /* clean up and return */
+  if(abcAA) { 
+    for(i = 0; i < msa->nseq; i++) { if(abcAA[i]) free(abcAA[i]); }
+    free(abcAA);
+  }
+  if(relentA)  free(relentA);
+  if(qA)       free(qA);
+  if(qintA)    free(qintA);
+
+  return;
+
+ ERROR:
+  if(abcAA) { 
+    for(i = 0; i < msa->nseq; i++) { if(abcAA[i]) free(abcAA[i]); }
+    free(abcAA);
+  }
+  if(relentA)  free(relentA);
+  if(qA)       free(qA);
+  if(qintA)    free(qintA);
+  croak("ERROR: _c_pos_relentropy(), out of memory");
+  return;
+}
+
+
 
 /* Function:  _c_pos_conservation()
  * Incept:    EPN, Tue May 20 15:04:29 2014
@@ -3470,7 +3604,6 @@ void _c_pos_gap(ESL_MSA *msa, int use_weights)
   int        status;           /* error status */
   int        apos;             /* counter over alignment positions */
   int        i;                /* counter over sequences */
-  int        a;                /* counter over residues in an alphabet */
   float      seqwt = 0.;       /* weight of current sequence, always 1.0 if use_weights == FALSE */
   double   **abcAA    = NULL;  /* [0..apos..msa->alen-1][0..a..abc->K]: count of nt 'a' in column 'apos', a==abc->K are gaps, missing residues or nonresidues */
   double    *gapA     = NULL;  /* [0..apos..msa->alen-1] fraction of gaps of column apos */

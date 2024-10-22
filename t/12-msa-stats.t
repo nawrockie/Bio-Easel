@@ -1,6 +1,6 @@
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 30;
+use Test::More tests => 65;
 
 BEGIN {
     use_ok( 'Bio::Easel::MSA' ) || print "Bail out!\n";
@@ -60,6 +60,60 @@ is(int(($entA[2] * 100) + 0.5), 137, "calculate_pos_ent() seems to work (pos 3)"
 is(int(($entA[3] * 100) + 0.5), 0,   "calculate_pos_ent() seems to work (pos 4)");
 is(int(($entA[4] * 100) + 0.5), 72,  "calculate_pos_ent() seems to work (pos 5)");
 is(int(($entA[5] * 100) + 0.5), 0,   "calculate_pos_ent() seems to work (pos 6)");
+
+# $use_weights, $gaps_as_miss, $use_uniform_bg, $bgcounts_AR
+my @relentA = $msa1->pos_relentropy(0, 1, 0, undef);
+is(int(($relentA[1] * 100) + 0.5), 0,   "calculate_pos_relent() 1 seems to work (pos 2)");
+is(int(($relentA[2] * 100) + 0.5), 64,  "calculate_pos_relent() 1 seems to work (pos 3)");
+is(int(($relentA[3] * 100) + 0.5), 203, "calculate_pos_relent() 1 seems to work (pos 4)");
+is(int(($relentA[4] * 100) + 0.5), 143, "calculate_pos_relent() 1 seems to work (pos 5)");
+is(int(($relentA[5] * 100) + 0.5), 203, "calculate_pos_relent() 1 seems to work (pos 6)");
+
+# if use_uniform_bg is 1, gaps_as_miss value is irrelevant
+@relentA = $msa1->pos_relentropy(0, 1, 1, undef);
+is(int(($relentA[1] * 100) + 0.5), 0,   "calculate_pos_relent() 2 seems to work (pos 2)");
+is(int(($relentA[2] * 100) + 0.5), 63,  "calculate_pos_relent() 2 seems to work (pos 3)");
+is(int(($relentA[3] * 100) + 0.5), 200, "calculate_pos_relent() 2 seems to work (pos 4)");
+is(int(($relentA[4] * 100) + 0.5), 128, "calculate_pos_relent() 2 seems to work (pos 5)");
+is(int(($relentA[5] * 100) + 0.5), 200, "calculate_pos_relent() 2 seems to work (pos 6)");
+
+@relentA = $msa1->pos_relentropy(0, 0, 1, undef);
+is(int(($relentA[1] * 100) + 0.5), 0,    "calculate_pos_relent() 3 seems to work (pos 2)");
+is(int(($relentA[2] * 100) + 0.5), 63,   "calculate_pos_relent() 3 seems to work (pos 3)");
+is(int(($relentA[3] * 100) + 0.5), 200,  "calculate_pos_relent() 3 seems to work (pos 4)");
+is(int(($relentA[4] * 100) + 0.5), 128,  "calculate_pos_relent() 3 seems to work (pos 5)");
+is(int(($relentA[5] * 100) + 0.5), 200,  "calculate_pos_relent() 3 seems to work (pos 6)");
+
+my @infoctA = $msa1->pos_infocontent(0);
+is(int(($infoctA[1] * 100) + 0.5), 0,   "calculate_pos_infocontent() seems to work (pos 2)");
+is(int(($infoctA[2] * 100) + 0.5), 63,  "calculate_pos_infocontent() seems to work (pos 3)");
+is(int(($infoctA[3] * 100) + 0.5), 200, "calculate_pos_infocontent() seems to work (pos 4)");
+is(int(($infoctA[4] * 100) + 0.5), 128, "calculate_pos_infocontent() seems to work (pos 5)");
+is(int(($infoctA[5] * 100) + 0.5), 200, "calculate_pos_infocontent() seems to work (pos 6)");
+
+@relentA = $msa1->pos_relentropy(0, 0, 0, undef);
+is(int(($relentA[1] * 100) + 0.5), 2,   "calculate_pos_relent() 4 seems to work (pos 2)");
+is(int(($relentA[2] * 100) + 0.5), 64,  "calculate_pos_relent() 4 seems to work (pos 3)");
+is(int(($relentA[3] * 100) + 0.5), 203, "calculate_pos_relent() 4 seems to work (pos 4)");
+is(int(($relentA[4] * 100) + 0.5), 143, "calculate_pos_relent() 4 seems to work (pos 5)");
+is(int(($relentA[5] * 100) + 0.5), 203, "calculate_pos_relent() 4 seems to work (pos 6)");
+
+my @bgcounts_A = (30, 10, 10, 30);
+@relentA = $msa1->pos_relentropy(0, 0, 0, \@bgcounts_A);
+is(int(($relentA[1] * 100) + 0.5), 21,  "calculate_pos_relent() 5 seems to work (pos 2)");
+is(int(($relentA[2] * 100) + 0.5), 36,  "calculate_pos_relent() 5 seems to work (pos 3)");
+is(int(($relentA[3] * 100) + 0.5), 300, "calculate_pos_relent() 5 seems to work (pos 4)");
+is(int(($relentA[4] * 100) + 0.5), 101, "calculate_pos_relent() 5 seems to work (pos 5)");
+is(int(($relentA[5] * 100) + 0.5), 300, "calculate_pos_relent() 5 seems to work (pos 6)");
+
+# try same thing with "" around ints
+@bgcounts_A = ("30", "10", "10", "30");
+@relentA = $msa1->pos_relentropy(0, 0, 0, \@bgcounts_A);
+is(int(($relentA[1] * 100) + 0.5), 21,  "calculate_pos_relent() 6 seems to work (pos 2)");
+is(int(($relentA[2] * 100) + 0.5), 36,  "calculate_pos_relent() 6 seems to work (pos 3)");
+is(int(($relentA[3] * 100) + 0.5), 300, "calculate_pos_relent() 6 seems to work (pos 4)");
+is(int(($relentA[4] * 100) + 0.5), 101, "calculate_pos_relent() 6 seems to work (pos 5)");
+is(int(($relentA[5] * 100) + 0.5), 300, "calculate_pos_relent() 6 seems to work (pos 6)");
 
 my @consA = $msa1->pos_conservation();
 is(int(($consA[1] * 100) + 0.5),   0, "calculate_pos_conservation() seems to work (pos 2)");
