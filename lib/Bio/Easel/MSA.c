@@ -3459,7 +3459,7 @@ void _c_pos_relentropy(ESL_MSA *msa, int use_weights, int gaps_as_miss, int use_
     }
   }
   esl_vec_DNorm(qA, msa->abc->K);
-  esl_vec_DDump(stderr, qA, msa->abc->K, "acgu");
+  /*esl_vec_DDump(stderr, qA, msa->abc->K, "acgu");*/
   
   /* calculate relative entropy, and fill return array */
   Inline_Stack_Reset;
@@ -3485,7 +3485,7 @@ void _c_pos_relentropy(ESL_MSA *msa, int use_weights, int gaps_as_miss, int use_
         /*fprintf(stderr, "\tapos %3d a %3d added %5.3f to relentA[apos], new value: %5.3f\n", apos, a, abcAA[apos][a] * (log(abcAA[apos][a] / qA[a]) / log(2)), relentA[apos]);*/
       }
     }
-    fprintf(stderr, "relentA[%2d]: %.3f\n", apos, relentA[apos]);
+    /*fprintf(stderr, "relentA[%2d]: %.3f\n", apos, relentA[apos]);*/
     Inline_Stack_Push(newSVnv(relentA[apos])); 
   }
   Inline_Stack_Done;
