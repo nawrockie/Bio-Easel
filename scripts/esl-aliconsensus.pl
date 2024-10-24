@@ -40,6 +40,7 @@ $usage .= "\t\t--nocons       : do not add GC CONS consensus sequence annotation
 $usage .= "\t\t--noconsfract  : add GC CONSFRACT consensus sequence fraction annotation\n";
 $usage .= "\t\t--gapfract     : add GC GAPFRACT fraction of seqs that are gaps annotation\n";
 $usage .= "\t\t--gaprf        : for GAPFRACT annotation, mark gap RF positions as gaps\n";
+$usage .= "\t\t--relent       : add GC RELENT relative entropy annotation\n";
 $usage .= "\t\t--mis          : add GC MIS 'most informative sequence' annotation\n";
 $usage .= "\t\t--misgap <x>   : with --mis, set threshold for a gap in MIS as <x> [df: 0.5]\n"; 
 $usage .= "\t\t--weights      : use sequence weights in the alignment\n";
@@ -57,6 +58,7 @@ my $do_nocons      = 0;
 my $do_noconsfract = 0;
 my $do_gapfract    = 0;
 my $do_gaprf       = 0;
+my $do_relent      = 0;
 my $do_mis         = 0;
 my $misgap         = 0.5;
 my $do_weights     = 0;
@@ -76,6 +78,7 @@ my $cmdline = "esl-aliconsensus.pl ". join(" ", @ARGV);
              "noconsfract" => \$do_nocons,
              "gapfract"    => \$do_gapfract,
              "gaprf"       => \$do_gaprf,
+             "relent"      => \$do_relent,
              "mis"         => \$do_mis,
              "misgap=s"    => \$misgap,
              "weights"     => \$do_weights,
@@ -234,6 +237,27 @@ if($do_gapfract) {
   }
   $msa->addGC("GAPFRACT", \@gap_fract_code_A);
   push(@gc_added_A, "GAPFRACT");
+}
+
+# determine and add RELENT annotation
+if($do_relent) { 
+  my @relent_A = $msa->pos_relentropy($do_weights, 1, 0, undef);
+  my @squashed_relent_A = (); # relative entropy values converted to a value between 0 and 1
+  for(my $i = 0; $i < $msa->alen; $i++) {
+    $squashed_relent_A = 1 - exp(-1 * $relent_A[$i]);
+    $relent_code_A[$i] = 
+  }
+#    my $c1 = -1 * exp(-1 * $relent_A[$i]);
+#    my $c2 = 10+($c1*10);
+#    my $c3 = int(($c2*2)+0.5);
+#    my $c4;
+#    if   ($c3 >= 10) { $c4 = "*"; }
+#    elsif($c3 == 0)  { $c4 = "-"; }
+#    else             { $c4 = $c3; }
+    # my $epn = 1 - exp(-1 * $relent_A[$i]);
+#    printf("RELENT[$i]: $relent_A[$i] c1: %.4f c2: %.4f c3: %d c4: %s epn: %.4f\n", $c1, $c2, $c3, $c4, $epn);
+  #$msa->addGC("RELENT", \@mis_A);
+  #push(@gc_added_A, "MIS");
 }
 
 # determine and add MIS annotation
