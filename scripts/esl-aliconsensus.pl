@@ -396,7 +396,6 @@ if((! $opt_rf_no) && (! $opt_rf_ignore)) {
       $msa->set_rf(join("", @cons_seq_A));
       $added_cons_as_rf = 1;
     }
-    push(@gc_added_A, "RF");
   }
 }
 
@@ -431,29 +430,56 @@ if($opt_mis) {
     push(@gc_added_A, "MIS");
 }  
 
+# write comments explaining what annotation was added and with what cmdline
+my $comment_line1 = "";
+my $comment_line2 = "";
+my $added_rf = ($added_x_as_rf || $added_mis_as_rf || $added_cons_as_rf) ? 1 : 0;
+if((scalar(@gc_added_A == 0)) && (! $added_rf)) {
+  die "ERROR no GC annotation added, probably due to strange choice of options.";
+}
+   
+if(scalar(@gc_added_A) > 0) { 
+  for(my $g = 0; $g < scalar(@gc_added_A) - 1; $g++) {
+    $comment_line1 .= $gc_added_A[$g] . ", ";
+  }
+  $comment_line1 .= $gc_added_A[(scalar(@gc_added_A)-1)] . " GC annotation added";
+  if($added_rf) { 
+    $comment_line1 .= " and ";
+  }
+}
+if($added_rf) { 
+  if($in_has_rf) { 
+    $comment_line1 .= "RF annotation redefined as ";
+  }
+  else {
+    $comment_line1 .= "RF annotation defined as ";
+  }
+  if($added_x_as_rf) {
+    $comment_line1 .= "\'x/.\'.";
+    if(! $in_has_rf) { 
+      $comment_line1 .= ", with gap positions defined based on fraction of gaps";
+    }
+  }
+  if($added_mis_as_rf) {
+    $comment_line1 .= "most-informative-sequence";
+    if(! $in_has_rf) { 
+      $comment_line1 .= ", with gap positions defined based on fraction of gaps";
+    }
+  }
+  if($added_cons_as_rf) {
+    $comment_line1 .= "CONS (consensus) annotation";
+    if(! $in_has_rf) { 
+      $comment_line1 .= ", with gap positions defined based on fraction of gaps";
+    }
+  }
+}
+      
+$comment_line1 .= " with command:";
+$comment_line2 = "'$cmdline' [Bio-Easel v$version]";
+$msa->addGF("CC", $comment_line1);
+$msa->addGF("CC", $comment_line2);
+
 $msa->write_msa("STDOUT", "stockholm", 0);
-
-# write comment explaining what annotation was added and with what cmdline
-#my $comment_line1 = "";
-#my $comment_line2 = "";
-#if(scalar(@gc_added_A) > 0) {
-#  for(my $g = 0; $g < scalar(@gc_added_A) - 1; $g++) {
-#    $comment_line1 .= $gc_added_A[$g] . ", ";
-#  }
-#  $comment_line1 .= $gc_added_A[(scalar(@gc_added_A)-1)] . " GC annotation added";
-#  if($do_cons2rf) {
-#    $comment_line1 .= " and ";
-#  }
-#}
-#if($do_cons2rf) { 
-#  $comment_line1 .= "RF annotation redefined as CONS";
-#}
-#$comment_line1 .= " with command:";
-#$comment_line2 = "'$cmdline' [Bio-Easel v$version]";
-#$msa->addGF("CC", $comment_line1);
-#$msa->addGF("CC", $comment_line2);
-
-#$msa->write_msa("STDOUT", "stockholm", 0);
 
 sub frequency_to_annotation_code {
   my ($frequency) = (@_);
