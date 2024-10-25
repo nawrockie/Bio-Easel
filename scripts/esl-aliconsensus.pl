@@ -235,9 +235,16 @@ if($opt_describe) {
   exit 0;
 }
 
-# open file 
+# open input file 
 my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile });
 my $alen = $msa->alen;
+
+# open output file, if --out
+my $OUT_FH = undef;
+if(defined $opt_out) {
+  open($OUT_FH, ">", $opt_out) || die "ERROR unable to open $opt_out from --out for writing";
+  print $OUT_FH ("#colidx\trfcolidx\ttag\tnumval\tcode\tskipped?\n");
+}
 
 # are we adding RF?
 my $in_has_rf = $msa->has_rf();
@@ -247,17 +254,17 @@ my $use_rf = (($opt_rf_ignore) || ($opt_rf_no && (! $in_has_rf))) ? 0 : 1;
 # are we 'skipping' annotation of gappy columns?
 my $do_skip = ($opt_skip) ? 1 : 0;
 
+my $apos;
 # determine gap freqs if we need them
 my @gap_fract_A      = (); # [0..a..apos-1] frequency of gaps in position a
 my @gap_fract_code_A = (); # [0..a..apos-1] code for frequency of gaps in position a
 if($add_rf || $do_skip || $opt_gapfract) { # we need to know gap frequencise
   @gap_fract_A = $msa->pos_gap($opt_weights);
-  for(my $apos = 0; $apos < $msa->alen; $apos++) {
+  for($apos = 0; $apos < $msa->alen; $apos++) {
     $gap_fract_code_A[$apos] = frequency_to_annotation_code($gap_fract_A[$apos]);
   }
 }
 
-my $apos;
 my @i_am_rf_A = (); # [0..a..alen-1]: '1' if a is a nongap RF position, '0' if gap
 
 # if we are enforcing RF: update gap_fract_code_A to have gaps at gap RF positions
@@ -325,8 +332,9 @@ if(! $opt_cons_no) {
 
 # determine INFO annotation
 my @info_code_A = ();
+my @info_A = ();
 if($opt_info) { 
-  my @info_A = $msa->pos_infocontent($opt_weights);
+  @info_A = $msa->pos_infocontent($opt_weights);
   for($apos = 0; $apos < $alen; $apos++) {
     if(($use_rf) && (! $i_am_rf_A[$apos])) {
       $info_code_A[$apos] = ".";
@@ -342,8 +350,9 @@ if($opt_info) {
 
 # determine RELENT annotation
 my @relent_code_A = ();
+my @relent_A = ();
 if($opt_relent) { 
-  my @relent_A = $msa->pos_relentropy($opt_weights, 1, 0, undef);
+  @relent_A = $msa->pos_relentropy($opt_weights, 1, 0, undef);
   my @squashed_relent_A = (); # relative entropy values converted to a value between 0 and 1
   for($apos = 0; $apos < $alen; $apos++) {
     $squashed_relent_A[$apos] = 1 - exp(-1 * $relent_A[$apos]);
@@ -473,14 +482,48 @@ if($added_rf) {
     }
   }
 }
-      
+
+# output data
+if(defined $opt_out) {
+  # GAPFRACT
+  if((scalar(@gap_fract_A) > 0) && (scalar(@gap_fract_code_A) > 0)) {
+    output_to_file($OUT_FH, "GAPFRACT", \@gap_fract_A, \@gap_fract_code_A, \@i_am_rf_A, $do_skip, $skip_thr, \@gap_fract_A);
+  }
+  # CONS 
+  if(scalar(@cons_seq_A)) { 
+    output_to_file($OUT_FH, "CONS", undef, \@cons_seq_A, \@i_am_rf_A, $do_skip, $skip_thr, \@gap_fract_A);
+  }
+  # CONSFRACT
+  if((scalar(@cons_fract_A) > 0) && (scalar(@cons_fract_code_A) > 0)) {
+    output_to_file($OUT_FH, "CONSFRACT", \@cons_fract_A, \@cons_fract_code_A, \@i_am_rf_A, $do_skip, $skip_thr, \@gap_fract_A);
+  }
+  # INFO
+  if((scalar(@info_A) > 0) && (scalar(@info_code_A) > 0)) {
+    output_to_file($OUT_FH, "INFO", \@info_A, \@info_code_A, \@i_am_rf_A, $do_skip, $skip_thr, \@gap_fract_A);
+  }
+  # RELENT
+  if((scalar(@relent_A) > 0) && (scalar(@relent_code_A) > 0)) {
+    output_to_file($OUT_FH, "RELENT", \@relent_A, \@relent_code_A, \@i_am_rf_A, $do_skip, $skip_thr, \@gap_fract_A);
+  }
+  # MIS
+  if(scalar(@mis_A) > 0) {
+    output_to_file($OUT_FH, "MIS", undef, \@mis_A, \@i_am_rf_A, $do_skip, $skip_thr, \@gap_fract_A);
+  }
+  close(OUT);
+}
+
+# add commets to msa with command and list of GC tags added
 $comment_line1 .= " with command:";
 $comment_line2 = "'$cmdline' [Bio-Easel v$version]";
 $msa->addGF("CC", $comment_line1);
 $msa->addGF("CC", $comment_line2);
 
+# output the msa
 $msa->write_msa("STDOUT", "stockholm", 0);
 
+
+########################
+# subroutines
 sub frequency_to_annotation_code {
   my ($frequency) = (@_);
   if   ($frequency >= 0.95) { return "*"; }
@@ -494,4 +537,35 @@ sub frequency_to_annotation_code {
   elsif($frequency >= 0.15) { return "2"; }
   elsif($frequency >= 0.05) { return "1"; }
   else                      { return "0"; }
+}
+
+########################
+# subroutines
+sub output_to_file { 
+  my ($FH, $code, $num_AR, $val_AR, $i_am_rf_AR, $do_skip, $skip_thr, $gap_AR) = (@_);
+
+  my $rfpos = 0;
+  my @alen = scalar(@{$val_AR});
+  my $i_am_rf_valid = ((defined $i_am_rf_AR) && (scalar(@{$i_am_rf_AR}) > 0)) ? 1 : 0;
+  my $num_valid     = ((defined $num_AR)     && (scalar(@{$num_AR})     > 0)) ? 1 : 0;
+  for(my $apos = 0; $apos < $alen; $apos++) { 
+    my $rfcolidx = "-";
+    if($i_am_rf_valid) {
+      if($i_am_rf_AR->[$apos]) {
+        $rfpos++;
+        $rfcolidx = $rfpos;
+      }
+      my $skipped  = "-";
+      if($do_skip) {
+        $skipped = ($gap_AR->[$apos] >= $skip_thr) ? "yes" : "no";
+      }
+      printf $FH ("%d\t\%s\t%s\t%s\t%s\t%s\n",
+                  ($apos+1),
+                  $rfcolidx,
+                  $code,
+                  ($num_valid) ? sprintf("%.6f", $num_AR->[$apos]) : "-",
+                  $val_AR->[$apos],
+                  $skipped);
+    }
+  }
 }
