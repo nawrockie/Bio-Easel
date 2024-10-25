@@ -1,0 +1,52 @@
+This script adds per-column (GC) annotation to an existing input MSA.
+
+If the input MSA has existing RF annotation it will be kept (or rewritten if --rf_cons, --rf_mis or
+--rf_x, but gap/nongap column definitions will not be changed).
+
+If the input MSA does not have RF annotation it will be added (unless --rf_no) and RF gap positions
+will be defined as positions with > 0.5 fraction gaps (changeable to <x> with --rf_gapthr <x>).
+
+For all added GC annotation, gap RF positions will be gaps ('.'), unless --rf_ignore used in which case
+no gaps will appear in added GC annotation.
+
+For all added GC annotation, if --skip is used, positions with > 0.05 gaps (changeable to <x> with
+--skip_thr <x>) will be marked as "x" (changeable to <c> with --skip_char <c>).
+
+Per-column annotation descriptions:
+
+CONS:      Most specific IUPAC nt that explains <y> > 0.5 (changeable to <x> with --cons_thr1 <x>)
+           if lower case, then <y> < 0.75 (changeable to <y> with --cons_thr2 <y>)
+           CONS is always added unless --cons_no is used, or added as RF if --rf_cons is used.
+
+CONSFRACT: <y> value for CONS annotation, encoded as fractional values [0..1] as explained below.
+           Only added if --cons_fract used.
+
+INFO:      Information content of each position, only available for DNA or RNA alignments.
+           Values range from 0.0 to 2.0 bits and are encoded like fractional values explained below, only
+           with values multiplied by 2 (e.g. '*': [1.90..2.00]).
+
+RELENT:    Proxy for relative entropy of each position, with background distribution set as background
+           frequency in alignment, across all columns. Actual values range from 0.0 to 1.0, and are calc'ed
+           as '1 - e^{-1 * relent}' where relent is the relative entropy (or Kullback-Leibler distance) for
+           the given column. The values are encoded as fractional values [0..1] as explained below.
+
+GAPFRACT:  Fraction of seqs that are a gap, encoded as values [0..1] as explained below.
+           Only added if --gapfract used.
+
+MIS:       Most-informative-sequence, IUPAC code that corresponds to all nt above background;
+           background calculated as the frequency of nt in alignment, across all columns.
+           Only added if --mis used. Or added as RF if --rf_mis used.
+
+Encoding of fractional values [0.0..1.0] in CONSFRACT and GAPFRACT annotation:
+     '*': [0.95..1.00]
+     '9': [0.85..0.95)
+     '8': [0.75..0.85)
+     '7': [0.65..0.75)
+     '6': [0.55..0.65)
+     '5': [0.45..0.55)
+     '4': [0.35..0.45)
+     '3': [0.25..0.35)
+     '2': [0.15..0.25)
+     '1': [0.05..0.15)
+     '0': [0.00..0.05)
+

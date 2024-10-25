@@ -3651,6 +3651,94 @@ sub pos_entropy
 
 #-------------------------------------------------------------------------------
 
+=head2 pos_relentropy
+
+  Title     : pos_relentropy
+  Incept    : EPN, Tue Oct 22 12:22:17 2024
+  Usage     : $msaObject->pos_relentropy
+  Function  : Calculate and return the relative entropy at each position 
+            : of an msa. If <$use_uniform_bg> is 0 and <$bgcounts_AR> is 
+            : undefined, background probability of the MSA will be used.
+  Args      : $use_weights:    '1' to use weights in the MSA, '0' not to
+            : $gaps_as_miss:   '1' to treat gaps as missing data and 
+            :                  count each gap as a fraction of each nt,
+            :                  (the background freq of that nt)
+            :                  '0' to ignore gaps
+            :                  default value is '1' (if undef, set to 1)
+            : $use_uniform_bg: '1' to use uniform background frequency
+            : $bgcounts_AR:    ref to array of background counts that 
+            :                  will eventually be normalized to,
+            :                  irrelevant if $use_uniform_bg is 1.
+            :                  These should be 'counts', not frequencies
+            :                 
+  Returns   : array of length msa->alen: the relative entropy at each 
+            : posn
+=cut
+
+sub pos_relentropy
+{
+  my ($self, $use_weights, $gaps_as_miss, $use_uniform_bg, $bgcounts_AR) = @_;
+
+  if(! defined $use_weights)    { $use_weights    = 0; }
+  if(! defined $gaps_as_miss)   { $gaps_as_miss   = 1; } # default: treat gaps as miss
+  if(! defined $use_uniform_bg) { $use_uniform_bg = 0; }
+
+  my @retA = ();
+  if($use_uniform_bg) {
+    my @bg_A = (1, 1, 1, 1);
+    @retA = _c_pos_relentropy($self->{esl_msa}, $use_weights, $gaps_as_miss, 1, \@bg_A); #1: use bg_A
+  }
+  else {
+    if(! defined $bgcounts_AR) {
+      my @bg_A = (1, 1, 1, 1); # irrelevant
+      @retA = _c_pos_relentropy($self->{esl_msa}, $use_weights, $gaps_as_miss, 0, \@bg_A); #0: do not use bg_A
+    }
+    else {
+      # make sure bgcounts_A values are integers, and create a new array where they are explicitly integers in perl world
+      my @actual_bgcounts_A = ();
+      for(my $a = 0; $a < scalar(@{$bgcounts_AR}); $a++) {
+        if($bgcounts_AR->[$a] !~ m/^\d+/) {
+          croak "in pos_relentropy, passed in bgcounts_AR element $a, $bgcounts_AR->[$a] is not an integer";
+        }
+        push(@actual_bgcounts_A, int($bgcounts_AR->[$a] + 0.5));
+      }
+      @retA = _c_pos_relentropy($self->{esl_msa}, $use_weights, $gaps_as_miss, 1, \@actual_bgcounts_A); #1: use bgcounts_AR
+    }
+  }
+
+  return @retA;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 pos_infocontent
+
+  Title     : pos_infocontent
+  Incept    : EPN, Tue Oct 22 15:04:11 2024
+  Usage     : $msaObject->pos_infocontent
+  Function  : Calculate and return the information content at each position 
+            : of an msa. This is just the relative entropy when the background
+            : frequency is uniform (Durbin book, page 308).
+  Args      : $use_weights: '1' to use weights in the MSA, '0' not to
+            :                 
+  Returns   : array of length msa->alen: the info content at each 
+            : posn
+=cut
+
+sub pos_infocontent
+{
+  my ($self, $use_weights) = @_;
+
+  if(! defined $use_weights)    { $use_weights    = 0; }
+
+  my @bg_A = (1, 1, 1, 1);
+  my @retA = _c_pos_relentropy($self->{esl_msa}, $use_weights, 0, 1, \@bg_A); #1: use bg_A
+
+  return @retA;
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 pos_conservation
 
   Title     : pos_conservation
