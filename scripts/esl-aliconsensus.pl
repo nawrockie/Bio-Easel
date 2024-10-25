@@ -36,13 +36,8 @@ $usage .= "\t--rf_no     : do not add RF annotation (if it does not already exis
 $usage .= "\t--rf_ignore : annotate all positions [df: only annotate nongap RF positions (if RF exists)]\n";
 $usage .= "\t--rf_cons   : set RF annotation as CONS annotation (even if it already exists)\n";
 $usage .= "\t--rf_mis    : set RF annotation as MIS annotation (even if it already exists)\n";
-$usage .= "\t--rf_x      : set RF annotation as 'x' and gaps (even if it already exists)\n";
+$usage .= "\t--rf_x      : set RF annotation as 'x' and gaps (only if it doesn't already exists)\n";
 $usage .= "\t--rf_gapthr : if no RF, set gap threshold for defining RF annotation to add as <x>\n";
-$usage .= "\n";
-$usage .= "options related to not annotating (skipping) positions based on gap frequency:\n";
-$usage .= "\t--skip          : do skip positions that are >= <x> fraction gaps\n";
-$usage .= "\t--skip_thr <x>  : set gap threshold for skipping positions to <x> [df: 0.05]\n";
-$usage .= "\t--skip_char <s> : set character for skipped positions (that are not gap RF) as <s> [df: 'x']\n";
 $usage .= "\n";
 $usage .= "options related to per-column CONS annotation:\n";
 $usage .= "\t--cons_thr1 <x> : threshold for fraction of seqs that must be covered by consensus iupac nt [df: 0.5]\n";
@@ -56,10 +51,15 @@ $usage .= "\t--relent   : add relative entropy (RELENT) annotation\n";
 $usage .= "\t--gapfract : add fraction of seqs that are gaps (GAPFRACT) annotation\n";
 $usage .= "\t--mis      : add 'most informative sequence' (MIS) annotation\n";
 $usage .= "\n";
+$usage .= "options related to not annotating (skipping) positions based on gap frequency:\n";
+$usage .= "\t--skip          : do skip positions that are >= <x> fraction gaps\n";
+$usage .= "\t--skip_thr <x>  : set gap threshold for skipping positions to <x> [df: 0.05]\n";
+$usage .= "\t--skip_char <s> : set character for skipped positions (that are not gap RF) as <s> [df: 'x']\n";
+$usage .= "\n";
 $usage .= "other options:\n";
-$usage .= "\t--weights  : use sequence weights in the alignment\n";
-$usage .= "\t--describe : output descriptions of possible annotation and exit\n";
-$usage .= "\t--out <s>  : save tabular output of data underlying annotations to file <s>\n";
+$usage .= "\t--weights   : use sequence weights in the alignment\n";
+$usage .= "\t--describe  : output descriptions of possible annotation and exit\n";
+$usage .= "\t--data <s>  : save tabular output of data underlying annotations to file <s>\n";
 
 # set defaults
 my $opt_rf_no      = 0;
@@ -69,11 +69,6 @@ my $opt_rf_mis     = 0;
 my $opt_rf_x       = 0;
 my $opt_rf_gapthr  = undef;
 my $df_rf_gapthr   = 0.5;
-my $opt_skip       = 0;
-my $opt_skip_thr   = undef;
-my $df_skip_thr    = 0.05;
-my $opt_skip_char  = undef;
-my $df_skip_char   = "x";
 my $opt_cons_thr1  = undef;
 my $df_cons_thr1   = 0.5;
 my $opt_cons_thr2  = undef;
@@ -84,9 +79,16 @@ my $opt_info       = 0;
 my $opt_relent     = 0;
 my $opt_gapfract   = 0;
 my $opt_mis        = 0;
+my $opt_skip       = 0;
+my $opt_skip_thr   = undef;
+my $df_skip_thr    = 0.05;
+my $opt_skip_char  = undef;
+my $df_skip_char   = "x";
 my $opt_weights    = 0;
 my $opt_describe   = 0;
-my $opt_out        = undef;
+my $opt_data       = undef;
+
+my $opt_nocomment  = 0;  # secret option, added so diffs in testing would be clean (comments include file paths which cause diffs to fail)
 
 my $cmdline = "esl-aliconsensus.pl ". join(" ", @ARGV);
 
@@ -96,9 +98,6 @@ my $cmdline = "esl-aliconsensus.pl ". join(" ", @ARGV);
              "rf_mis"      => \$opt_rf_mis,
              "rf_x"        => \$opt_rf_x,
              "rf_gapthr=s" => \$opt_rf_gapthr,
-             "skip"        => \$opt_skip,
-             "skip_thr=s"  => \$opt_skip_thr,
-             "skip_char=s" => \$opt_skip_char,
              "cons_thr1=s" => \$opt_cons_thr1,
              "cons_thr2=s" => \$opt_cons_thr2,
              "cons_no"     => \$opt_cons_no,
@@ -107,9 +106,13 @@ my $cmdline = "esl-aliconsensus.pl ". join(" ", @ARGV);
              "relent"      => \$opt_relent,
              "gapfract"    => \$opt_gapfract,
              "mis"         => \$opt_mis,
+             "skip"        => \$opt_skip,
+             "skip_thr=s"  => \$opt_skip_thr,
+             "skip_char=s" => \$opt_skip_char,
              "weights"     => \$opt_weights,
              "describe"    => \$opt_describe, 
-             "out=s"       => \$opt_out);
+             "data=s"      => \$opt_data, 
+             "nocomment"   => \$opt_nocomment);
 
 if(scalar(@ARGV) != 1) { die $usage; }
 ($in_alifile) = @ARGV;
@@ -239,15 +242,18 @@ if($opt_describe) {
 my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile });
 my $alen = $msa->alen;
 
-# open output file, if --out
+# open output file, if --data
 my $OUT_FH = undef;
-if(defined $opt_out) {
-  open($OUT_FH, ">", $opt_out) || die "ERROR unable to open $opt_out from --out for writing";
+if(defined $opt_data) {
+  open($OUT_FH, ">", $opt_data) || die "ERROR unable to open $opt_data from --data for writing";
   print $OUT_FH ("#colidx\trfcolidx\ttag\tnumval\tcode\tskipped?\n");
 }
 
 # are we adding RF?
 my $in_has_rf = $msa->has_rf();
+if(($in_has_rf) && ($opt_rf_x)) {
+  die "ERROR --rf_x only allowed if msa does not already have RF annotation";
+}
 my $add_rf = ((! $in_has_rf) && (! $opt_rf_no)) ? 1 : 0;
 # are we using RF to define gap positions an all annotation we add?
 my $use_rf = (($opt_rf_ignore) || ($opt_rf_no && (! $in_has_rf))) ? 0 : 1;
@@ -307,25 +313,23 @@ elsif($add_rf) {
 my @cons_seq_A = ();
 my @cons_fract_A = ();
 my @cons_fract_code_A = ();
-if(! $opt_cons_no) { 
-  my $cons_seq = $msa->consensus_iupac_sequence($cons_thr1, $cons_thr2, $use_rf, $opt_weights, \@cons_fract_A);
-  @cons_seq_A = split("", $cons_seq);
-  # create the @cons_fract_A
-  for($apos = 0; $apos < $msa->alen; $apos++) {
-    if($cons_seq_A[$apos] eq "-") {
-      $cons_seq_A[$apos]        = "."; # use '.' for RF gaps
-      $cons_fract_code_A[$apos] = "."; # use '.' for RF gaps
+my $cons_seq = $msa->consensus_iupac_sequence($cons_thr1, $cons_thr2, $use_rf, $opt_weights, \@cons_fract_A);
+@cons_seq_A = split("", $cons_seq);
+# create the @cons_fract_A
+for($apos = 0; $apos < $msa->alen; $apos++) {
+  if($cons_seq_A[$apos] eq "-") {
+    $cons_seq_A[$apos]        = "."; # use '.' for RF gaps
+    $cons_fract_code_A[$apos] = "."; # use '.' for RF gaps
+  }
+  else { 
+    #printf("apos: $apos do_skip: $do_skip gap_fract_A[$apos] $gap_fract_A[$apos] opt_skip_thr $skip_thr\n");
+    if(($do_skip) && ($gap_fract_A[$apos] >= $skip_thr)) {
+      $cons_seq_A[$apos] = $skip_char;
+      # use gap fraction not cons_fract for determining cons_fract code
+      $cons_fract_code_A[$apos] = frequency_to_annotation_code($gap_fract_A[$apos]);
     }
     else { 
-      #printf("apos: $apos do_skip: $do_skip gap_fract_A[$apos] $gap_fract_A[$apos] opt_skip_thr $skip_thr\n");
-      if(($do_skip) && ($gap_fract_A[$apos] >= $skip_thr)) {
-        $cons_seq_A[$apos] = $skip_char;
-        # use gap fraction not cons_fract for determining cons_fract code
-        $cons_fract_code_A[$apos] = frequency_to_annotation_code($gap_fract_A[$apos]);
-      }
-      else { 
-        $cons_fract_code_A[$apos] = frequency_to_annotation_code($cons_fract_A[$apos]);
-      }
+      $cons_fract_code_A[$apos] = frequency_to_annotation_code($cons_fract_A[$apos]);
     }
   }
 }
@@ -482,9 +486,16 @@ if($added_rf) {
     }
   }
 }
+# add commets to msa with command and list of GC tags added
+$comment_line1 .= " with command:";
+$comment_line2 = "'$cmdline' [Bio-Easel v$version]";
+if(! $opt_nocomment) { 
+  $msa->addGF("CC", $comment_line1);
+  $msa->addGF("CC", $comment_line2);
+}
 
 # output data
-if(defined $opt_out) {
+if(defined $opt_data) {
   # GAPFRACT
   if((scalar(@gap_fract_A) > 0) && (scalar(@gap_fract_code_A) > 0)) {
     output_to_file($OUT_FH, "GAPFRACT", \@gap_fract_A, \@gap_fract_code_A, \@i_am_rf_A, $do_skip, $skip_thr, \@gap_fract_A);
@@ -511,12 +522,6 @@ if(defined $opt_out) {
   }
   close(OUT);
 }
-
-# add commets to msa with command and list of GC tags added
-$comment_line1 .= " with command:";
-$comment_line2 = "'$cmdline' [Bio-Easel v$version]";
-$msa->addGF("CC", $comment_line1);
-$msa->addGF("CC", $comment_line2);
 
 # output the msa
 $msa->write_msa("STDOUT", "stockholm", 0);
@@ -555,17 +560,17 @@ sub output_to_file {
         $rfpos++;
         $rfcolidx = $rfpos;
       }
-      my $skipped  = "-";
-      if($do_skip) {
-        $skipped = ($gap_AR->[$apos] >= $skip_thr) ? "yes" : "no";
-      }
-      printf $FH ("%d\t\%s\t%s\t%s\t%s\t%s\n",
-                  ($apos+1),
-                  $rfcolidx,
-                  $code,
-                  ($num_valid) ? sprintf("%.6f", $num_AR->[$apos]) : "-",
-                  $val_AR->[$apos],
-                  $skipped);
     }
+    my $skipped  = "-";
+    if($do_skip) {
+      $skipped = ($gap_AR->[$apos] >= $skip_thr) ? "yes" : "no";
+    }
+    printf $FH ("%d\t\%s\t%s\t%s\t%s\t%s\n",
+                ($apos+1),
+                $rfcolidx,
+                $code,
+                ($num_valid) ? sprintf("%.6f", $num_AR->[$apos]) : "-",
+                $val_AR->[$apos],
+                $skipped);
   }
 }
