@@ -23,13 +23,16 @@ $usage .= "\n";
 $usage .= "Usage: esl-alicompare2rf.pl <alignment file with RF anntotation>\n";
 #$usage .= "Usage: esl-alicompare2rf.pl [OPTIONS] <alignment file with RF anntotation>\n";
 $usage .= "\tOPTIONS:\n";
-$usage .= "\t\t--alldel : include terminal deletions, [df: do not]\n";
+$usage .= "\t\t--alldel    : include terminal deletions, [df: do not]\n";
+$usage .= "\t\t--seqrf <s> : set RF to compare to as seq <s>\n";
 #$usage .= "\t\t-w       : use sequence weights in the alignment file to weight counts [df: do not]\n";
 #$usage .= "\t\t--nc <f> : ignore PPs, remove consensus basepairs for which > <f> fraction are non-canonical\n";
 #$usage .= "\t\t--dg <f> : ignore PPs, remove consensus basepairs for which > <f> fraction of seqs are double gaps\n";
 
 my $do_alldel = 0;
-&GetOptions( "alldel" => \$do_alldel);
+my $seqrf     = undef;
+&GetOptions( "alldel"  => \$do_alldel,
+             "seqrf=s" => \$seqrf);
 #             "w"    => \$use_weights, 
 #             "nc=s" => \$min_fractnc,
 #             "dg=s" => \$min_fractdg);
@@ -44,26 +47,48 @@ if(! -e $in_alifile) { die "ERROR $in_alifile does not exist"; }
 my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile });
 
 # check if we have RF
-if(! $msa->has_rf) { die "ERROR, alignment must have RF annotation, it does not"; }
+if((! defined $seqrf) && (! $msa->has_rf)) { die "ERROR, if --seqrf not used, alignment must have RF annotation, it does not"; }
 
 my $alen = $msa->alen;
+my $nseq = $msa->nseq; 
+my $i    = 0; # counter over sequences 
 
-# get RF
-my $rf_str = $msa->get_rf;
+# get RF or the sequence that you want to use as RF
+my $rf_str = undef;
+if(! defined $seqrf) { 
+  $rf_str = $msa->get_rf;
+}
+else { # find the sequence
+  for($i = 0; $i < $nseq; $i++) { 
+    my $seq_name = $msa->get_sqname($i);
+    if($seq_name eq $seqrf) {
+      $rf_str = $msa->get_sqstring_aligned($i);
+    }
+  }
+  if(! defined $rf_str) {
+    die "ERROR, --seqrf used, but did not find a sequence named $seqrf in alignment.";
+  }
+}
+
 my @rf_A = split("", $rf_str);
+my $i;
 if(scalar(@rf_A) != $alen) { 
   die "ERROR unexpected alignment length mismatch $alen != %d\n";
 }
 
 #printf("%-30s  %5s  %5s  %5s  %6s  %6s  description\n", 
 #         "#seqname", "rfpos", "sqpos", "apos", "rfchar", "sqchar");
+if(defined $seqrf) {
+  print("# Reference (RF) set as $seqrf\n");
+}
+else { 
+  print("# Reference (RF) set as #=GC RF from alignment $seqrf\n");
+}
 printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
        "#seqname", "rfpos", "sqpos", "apos", "rfchar", "sqchar", "description");
 
-my $nseq = $msa->nseq; 
-
 # for each sequence, go through each position and output differences with RF
-for(my $i = 0; $i < $nseq; $i++) { 
+for($i = 0; $i < $nseq; $i++) { 
   my $seq_name = $msa->get_sqname($i);
   my $asqstring = $msa->get_sqstring_aligned($i);
   my @asqstring_A = split("", $asqstring);
