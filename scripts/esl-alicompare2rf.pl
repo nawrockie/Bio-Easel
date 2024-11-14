@@ -22,13 +22,14 @@ $usage .= "# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 $usage .= "\n";
 $usage .= "Usage: esl-alicompare2rf.pl <alignment file with RF anntotation>\n";
 #$usage .= "Usage: esl-alicompare2rf.pl [OPTIONS] <alignment file with RF anntotation>\n";
-#$usage .= "\tOPTIONS:\n";
-#$usage .= "\t\t-a <f>   : change minimum average posterior probability to keep to <f> [df: $min_avgpp]\n";
+$usage .= "\tOPTIONS:\n";
+$usage .= "\t\t--alldel : include terminal deletions, [df: do not]\n";
 #$usage .= "\t\t-w       : use sequence weights in the alignment file to weight counts [df: do not]\n";
 #$usage .= "\t\t--nc <f> : ignore PPs, remove consensus basepairs for which > <f> fraction are non-canonical\n";
 #$usage .= "\t\t--dg <f> : ignore PPs, remove consensus basepairs for which > <f> fraction of seqs are double gaps\n";
 
-#&GetOptions( "a=s"  => \$min_avgpp,
+my $do_alldel = 0;
+&GetOptions( "alldel" => \$do_alldel);
 #             "w"    => \$use_weights, 
 #             "nc=s" => \$min_fractnc,
 #             "dg=s" => \$min_fractdg);
@@ -54,10 +55,13 @@ if(scalar(@rf_A) != $alen) {
   die "ERROR unexpected alignment length mismatch $alen != %d\n";
 }
 
-printf("%-30s  %5s  %5s  %5s  %6s  %6s  description\n", 
-       "#seqname", "rfpos", "sqpos", "apos", "rfchar", "sqchar");
+#printf("%-30s  %5s  %5s  %5s  %6s  %6s  description\n", 
+#         "#seqname", "rfpos", "sqpos", "apos", "rfchar", "sqchar");
+printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+       "#seqname", "rfpos", "sqpos", "apos", "rfchar", "sqchar", "description");
 
 my $nseq = $msa->nseq; 
+
 # for each sequence, go through each position and output differences with RF
 for(my $i = 0; $i < $nseq; $i++) { 
   my $seq_name = $msa->get_sqname($i);
@@ -65,7 +69,25 @@ for(my $i = 0; $i < $nseq; $i++) {
   my @asqstring_A = split("", $asqstring);
   my $rfpos = 0;
   my $sqpos = 0;
-  for(my $apos = 1; $apos <= $alen; $apos++) { 
+
+  # determine first and final apos with a nongap residue
+  my $apos = 0;
+  my $spos = $alen+1;
+  my $epos = 0;
+  for($apos = 1; $apos <= $alen; $apos++) { 
+    if ($asqstring_A[($apos-1)] =~ m/[A-Z]/) {
+      $spos = $apos;
+      $apos = $alen+1; # breaks loop
+    }
+  }
+  for($apos = $alen; $apos >= 1; $apos--) { 
+    if ($asqstring_A[($apos-1)] =~ m/[A-Z]/) {
+      $epos = $apos;
+      $apos = 0; # breaks loop
+    }
+  }
+  
+  for($apos = 1; $apos <= $alen; $apos++) { 
     my $sqchar = $asqstring_A[($apos-1)];
     my $rfchar = $rf_A[($apos-1)];
     my $orig_sqchar = $sqchar;
@@ -85,7 +107,9 @@ for(my $i = 0; $i < $nseq; $i++) {
     }
     else { # rf is not a gap
       if($sq_is_gap) { 
-        $desc = "deletion";
+        if(($do_alldel) || (($apos >= $spos) && ($apos <= $epos))) { 
+          $desc = "deletion";
+        }
       }
       elsif($rfchar ne $sqchar) { 
         $desc = "substitution";
