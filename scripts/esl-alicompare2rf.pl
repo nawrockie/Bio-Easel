@@ -44,7 +44,9 @@ if(scalar(@ARGV) != 1) { die $usage; }
 if(! -e $in_alifile) { die "ERROR $in_alifile does not exist"; }
 
 # open file 
-my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile });
+my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile,
+                                 forceText => 1,
+                               });
 
 # check if we have RF, we need it unless --seqrf
 my $has_rf = $msa->has_rf;
@@ -209,7 +211,7 @@ for($i = 0; $i < $nseq; $i++) {
         ($cur_rfpos_start, $cur_rfpos_end, $cur_apos_start, $cur_apos_end) = (undef, undef, undef, undef);
         $cur_rfchar_str = "";
       }
-      printf("$cur_str%s\n", (defined $cur_opt) ? "\t" . $cur_opt : "");
+      printf($cur_str . "\tsubstitution%s\n", (defined $cur_opt) ? "\t" . $cur_opt : "");
     }
     elsif($cur_desc eq "deletion") {
       # output any insertion strings we have
