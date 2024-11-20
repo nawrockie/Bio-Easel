@@ -46,8 +46,9 @@ if(! -e $in_alifile) { die "ERROR $in_alifile does not exist"; }
 # open file 
 my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile });
 
-# check if we have RF
-if((! defined $seqrf) && (! $msa->has_rf)) { die "ERROR, if --seqrf not used, alignment must have RF annotation, it does not"; }
+# check if we have RF, we need it unless --seqrf
+my $has_rf = $msa->has_rf;
+if((! defined $seqrf) && (! $has_rf)) { die "ERROR, if --seqrf not used, alignment must have RF annotation, it does not"; }
 
 my $alen = $msa->alen;
 my $nseq = $msa->nseq; 
@@ -55,9 +56,11 @@ my $i    = 0; # counter over sequences
 
 # get RF or the sequence that you want to use as RF
 my $rf_str = undef;
+my $gc_rf_str = ($has_rf) ? $msa->get_rf : undef;
 if(! defined $seqrf) { 
-  $rf_str = $msa->get_rf;
+  $rf_str = $gc_rf_str;
 }
+  
 else { # find the sequence
   for($i = 0; $i < $nseq; $i++) { 
     my $seq_name = $msa->get_sqname($i);
@@ -70,11 +73,17 @@ else { # find the sequence
   }
 }
 
+my @gc_rf_A = ();
+my $use_gc_rf = 0;
+if($has_rf && (defined $seqrf)) {
+  @gc_rf_A = split("", $gc_rf_str);
+  $use_gc_rf = 1;
+}
 my @rf_A = split("", $rf_str);
-my $i;
 if(scalar(@rf_A) != $alen) { 
   die "ERROR unexpected alignment length mismatch $alen != %d\n";
 }
+my $i;
 
 #printf("%-30s  %5s  %5s  %5s  %6s  %6s  description\n", 
 #         "#seqname", "rfpos", "sqpos", "apos", "rfchar", "sqchar");
@@ -84,18 +93,22 @@ if(defined $seqrf) {
 else { 
   print("# Reference (RF) set as #=GC RF from alignment $seqrf\n");
 }
-printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-       "#seqname", "rfpos", "sqpos", "apos", "rfchar", "sqchar", "description");
+my $optional_field = ($use_gc_rf) ? "\tGC_RF_is_gap?" : "";
+printf("%s\t%s\t%s\t%s\t%s\t%s\t%s%s\n",
+       "#seqname", "rfpos", "sqpos", "apos", "rfchar", "sqchar", "description", $optional_field);
 
-# for each sequence, go through each position and output differences with RF
+# for each sequence, go through each position and determine differences with RF
+# we save these lines to an array so we can go back through the array and combine
+# any deletions or insertions with lengths greater than 1 into a single line.
 for($i = 0; $i < $nseq; $i++) { 
   my $seq_name = $msa->get_sqname($i);
   my $asqstring = $msa->get_sqstring_aligned($i);
   my @asqstring_A = split("", $asqstring);
   my $rfpos = 0;
   my $sqpos = 0;
-  my @out_str_A = ();
-  my @out_desc_A = ();
+  my @out_str_A  = (); # array of output strings, all information except the 'description' field
+  my @out_desc_A = (); # array of output descriptions
+  my @out_opt_A  = (); # array of optional fields for output, only filled if --seqrf and alignment has GC RF annotation
   
   # determine first and final apos with a nongap residue
   my $apos = 0;
@@ -113,16 +126,23 @@ for($i = 0; $i < $nseq; $i++) {
       $apos = 0; # breaks loop
     }
   }
-  
+
+  my $gc_rf_is_gap;
   for($apos = 1; $apos <= $alen; $apos++) { 
-    my $sqchar = $asqstring_A[($apos-1)];
-    my $rfchar = $rf_A[($apos-1)];
+    my $sqchar    = $asqstring_A[($apos-1)];
+    my $rfchar    = $rf_A[($apos-1)];
+    my $gc_rfchar = ($use_gc_rf) ? $gc_rf_A[($apos-1)] : undef;
     my $tmp_sqchar = $sqchar;
     my $tmp_rfchar = $rfchar;
     $tmp_sqchar =~ tr/a-z/A-Z/; # uppercase-ize
     $tmp_rfchar =~ tr/a-z/A-Z/; # uppercase-ize
-    my $sq_is_gap = ($tmp_sqchar =~ m/[A-Z]/) ? 0 : 1;
-    my $rf_is_gap = ($tmp_rfchar =~ m/[A-Z]/) ? 0 : 1;
+    my $sq_is_gap    = ($tmp_sqchar =~ m/[A-Z]/) ? 0 : 1;
+    my $rf_is_gap    = ($tmp_rfchar =~ m/[A-Z]/) ? 0 : 1;
+    $gc_rf_is_gap = 0;
+    if(defined $gc_rfchar) { 
+      $gc_rfchar =~ tr/a-z/A-Z/; # uppercase-ize
+      $gc_rf_is_gap = ($gc_rfchar =~ m/[A-Z]/) ? 0 : 1;
+    }
     my $desc = undef;
     if(! $rf_is_gap) { $rfpos++; }
     if(! $sq_is_gap) { $sqpos++; }
@@ -143,13 +163,19 @@ for($i = 0; $i < $nseq; $i++) {
       }
     }
     if(defined $desc) { 
+      # if --seqrf and we have RF annotation, output extra column indicating if GC RF position is a gap or not
       push(@out_str_A, sprintf("%s\t%d\t%d\t%d\t%s\t%s", 
                                $seq_name, $rfpos, $sqpos, $apos, $rfchar, $sqchar));
       push(@out_desc_A, $desc);
+
+      if($use_gc_rf) { 
+        push(@out_opt_A, ($gc_rf_is_gap) ? "y" : "n");
+      }
     }
   }
 
-  # output for all RF positions, we can go to alen (rflen must be <= alen)
+  # output for all RF positions, combining indels length > 1 into one line,
+  # we can go to alen (rflen must be <= alen)
   my $nlines = scalar(@out_str_A);
   my $prv_desc = undef;
   my ($cur_seq_name, $cur_rfpos,  $cur_sqpos, $cur_apos, $cur_rfchar, $cur_sqchar, $cur_desc);
@@ -161,32 +187,34 @@ for($i = 0; $i < $nseq; $i++) {
   my $cur_rfpos_end   = undef;
   my $cur_sqchar_str  = "";
   my $cur_rfchar_str  = "";
-  
+  my $cur_opt         = undef; # current optional field
+  my $cur_opt_str     = undef; # current optional field
   for(my $l = 0; $l < $nlines; $l++) { 
     my $cur_str = $out_str_A[$l];
     $cur_desc = $out_desc_A[$l];
-
+    $cur_opt  = ($use_gc_rf) ? $out_opt_A[$l] : undef;
+    
     # if substitution - output it
     # if deletion, keep going until sqpos changes, then output summary line
     # if insertion, keep going until rfpos changes, then output summary line
     if($cur_desc eq "substitution") {
       # output any insertion or deletion strings we have
       if(defined $cur_sqpos_start) {
-        output_summary_insertion_string($cur_seq_name, $cur_rfpos, $cur_sqpos_start, $cur_sqpos_end, $cur_apos_start, $cur_apos_end, $cur_sqchar_str);
+        output_summary_insertion_string($cur_seq_name, $cur_rfpos, $cur_sqpos_start, $cur_sqpos_end, $cur_apos_start, $cur_apos_end, $cur_sqchar_str, $cur_opt_str);
         ($cur_sqpos_start, $cur_sqpos_end, $cur_apos_start, $cur_apos_end) = (undef, undef, undef, undef);
         $cur_sqchar_str = "";
       }
       if(defined $cur_rfpos_start) {
-        output_summary_deletion_string($cur_seq_name, $cur_rfpos_start, $cur_rfpos_end, $cur_sqpos, $cur_apos_start, $cur_apos_end, $cur_rfchar_str);
+        output_summary_deletion_string($cur_seq_name, $cur_rfpos_start, $cur_rfpos_end, $cur_sqpos, $cur_apos_start, $cur_apos_end, $cur_rfchar_str, $cur_opt_str);
         ($cur_rfpos_start, $cur_rfpos_end, $cur_apos_start, $cur_apos_end) = (undef, undef, undef, undef);
         $cur_rfchar_str = "";
       }
-      print $cur_str . "\tsubstitution\n";
+      printf("$cur_str%s\n", (defined $cur_opt) ? "\t" . $cur_opt : "");
     }
     elsif($cur_desc eq "deletion") {
       # output any insertion strings we have
       if(defined $cur_sqpos_start) {
-        output_summary_insertion_string($cur_seq_name, $cur_rfpos, $cur_sqpos_start, $cur_sqpos_end, $cur_apos_start, $cur_apos_end, $cur_sqchar_str);
+        output_summary_insertion_string($cur_seq_name, $cur_rfpos, $cur_sqpos_start, $cur_sqpos_end, $cur_apos_start, $cur_apos_end, $cur_sqchar_str, $cur_opt_str);
         ($cur_sqpos_start, $cur_sqpos_end, $cur_apos_start, $cur_apos_end) = (undef, undef, undef, undef);
         $cur_sqchar_str = "";
       }
@@ -200,9 +228,15 @@ for($i = 0; $i < $nseq; $i++) {
         $cur_rfpos_start = $cur_rfpos;
         $cur_apos_start  = $cur_apos;
         $cur_rfchar_str  = $cur_rfchar;
+        if(defined $cur_opt) { 
+          $cur_opt_str = $cur_opt;
+        }
       }
       else {
         $cur_rfchar_str .= $cur_rfchar;
+        if(defined $cur_opt) { 
+          $cur_opt_str .= $cur_opt;
+        }
       }
       $cur_rfpos_end = $cur_rfpos;
       $cur_apos_end  = $cur_apos;
@@ -211,7 +245,7 @@ for($i = 0; $i < $nseq; $i++) {
     elsif($cur_desc eq "insert-after-RF-position") {
       # output any deletion strings we have
       if(defined $cur_rfpos_start) {
-        output_summary_deletion_string($cur_seq_name, $cur_rfpos_start, $cur_rfpos_end, $cur_sqpos, $cur_apos_start, $cur_apos_end, $cur_rfchar_str);
+        output_summary_deletion_string($cur_seq_name, $cur_rfpos_start, $cur_rfpos_end, $cur_sqpos, $cur_apos_start, $cur_apos_end, $cur_rfchar_str, $cur_opt_str);
         ($cur_rfpos_start, $cur_rfpos_end, $cur_apos_start, $cur_apos_end) = (undef, undef, undef, undef);
         $cur_rfchar_str = "";
       }
@@ -225,21 +259,28 @@ for($i = 0; $i < $nseq; $i++) {
         $cur_sqpos_start = $cur_sqpos;
         $cur_apos_start  = $cur_apos;
         $cur_sqchar_str  = $cur_sqchar;
+        if(defined $cur_opt) { 
+          $cur_opt_str = $cur_opt;
+        }
       }
       else {
         $cur_sqchar_str .= $cur_sqchar;
+        if(defined $cur_opt) { 
+          $cur_opt_str .= $cur_opt;
+        }
       }
       $cur_sqpos_end = $cur_sqpos;
       $cur_apos_end  = $cur_apos;
     }
   }
+  # output final insertion and/or deletion lines
   if(defined $cur_sqpos_start) {
-    output_summary_insertion_string($cur_seq_name, $cur_rfpos, $cur_sqpos_start, $cur_sqpos_end, $cur_apos_start, $cur_apos_end, $cur_sqchar_str);
+    output_summary_insertion_string($cur_seq_name, $cur_rfpos, $cur_sqpos_start, $cur_sqpos_end, $cur_apos_start, $cur_apos_end, $cur_sqchar_str, $cur_opt_str);
     ($cur_sqpos_start, $cur_sqpos_end, $cur_apos_start, $cur_apos_end) = (undef, undef, undef, undef);
     $cur_sqchar_str = "";
   }
   if(defined $cur_rfpos_start) {
-    output_summary_deletion_string($cur_seq_name, $cur_rfpos_start, $cur_rfpos_end, $cur_sqpos, $cur_apos_start, $cur_apos_end, $cur_rfchar_str);
+    output_summary_deletion_string($cur_seq_name, $cur_rfpos_start, $cur_rfpos_end, $cur_sqpos, $cur_apos_start, $cur_apos_end, $cur_rfchar_str, $cur_opt_str);
     ($cur_rfpos_start, $cur_rfpos_end, $cur_apos_start, $cur_apos_end) = (undef, undef, undef, undef);
     $cur_rfchar_str = "";
   }
@@ -256,19 +297,21 @@ for($i = 0; $i < $nseq; $i++) {
 #   $apos_start:  start alignment position
 #   $apos_end:    end alignment position
 #   $sqchar_str:  sequence string
+#   $opt_str:     string for optional output, can be undef
 #
 #################################################################
 sub output_summary_insertion_string { 
   my $sub_name = "output_summary_insertion_string";
-  my $nargs_expected = 7;
+  my $nargs_expected = 8;
   if(scalar(@_) != $nargs_expected) { die "ERROR $sub_name entered with wrong number of input args" }
 
-  my ($seq_name, $rfpos, $sqpos_start, $sqpos_end,  $apos_start, $apos_end, $sqchar_str) = @_;
+  my ($seq_name, $rfpos, $sqpos_start, $sqpos_end,  $apos_start, $apos_end, $sqchar_str, $opt_str) = @_;
 
   my $sqpos_str = ($sqpos_start eq $sqpos_end) ? $sqpos_start : $sqpos_start . ".." . $sqpos_end;
   my $apos_str  = ($apos_start  eq $apos_end)  ? $apos_start  : $apos_start  . ".." . $apos_end;
-  printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", 
-         $seq_name, $rfpos, $sqpos_str, $apos_str, "-", $sqchar_str, "insert-after-RF-position");
+  printf("%s\t%s\t%s\t%s\t%s\t%s\t%s%s\n", 
+         $seq_name, $rfpos, $sqpos_str, $apos_str, "-", $sqchar_str, "insert-after-RF-position",
+         (defined $opt_str) ? ("\t" . $opt_str) : "");
 
   return;
 }
@@ -284,19 +327,21 @@ sub output_summary_insertion_string {
 #   $apos_start:  start alignment position
 #   $apos_end:    end alignment position
 #   $rfchar_str:  reference string
+#   $opt_str:     optional output string, can be undef
 #
 #################################################################
 sub output_summary_deletion_string { 
   my $sub_name = "output_summary_deletion_string";
-  my $nargs_expected = 7;
+  my $nargs_expected = 8;
   if(scalar(@_) != $nargs_expected) { die "ERROR $sub_name entered with wrong number of input args" }
 
-  my ($seq_name, $rfpos_start, $rfpos_end, $sqpos, $apos_start, $apos_end, $rfchar_str) = @_;
+  my ($seq_name, $rfpos_start, $rfpos_end, $sqpos, $apos_start, $apos_end, $rfchar_str, $opt_str) = @_;
 
   my $rfpos_str = ($rfpos_start eq $rfpos_end) ? $rfpos_start : $rfpos_start . ".." . $rfpos_end;
   my $apos_str  = ($apos_start  eq $apos_end)  ? $apos_start  : $apos_start  . ".." . $apos_end;
-  printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", 
-         $seq_name, $rfpos_str, $sqpos, $apos_str, $rfchar_str, "-", "deletion");
+  printf("%s\t%s\t%s\t%s\t%s\t%s\t%s%s\n", 
+         $seq_name, $rfpos_str, $sqpos, $apos_str, $rfchar_str, "-", "deletion",
+         (defined $opt_str) ? ("\t" . $opt_str) : "");
 
   return;
 }
