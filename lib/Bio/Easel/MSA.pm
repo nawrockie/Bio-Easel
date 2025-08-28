@@ -2379,37 +2379,6 @@ sub getGR_tagidx {
 
 #-------------------------------------------------------------------------------
 
-=head2 addGS
-
-  Title    : addGS
-  Incept   : EPN, Thu Aug 28 10:00:05 2025
-  Usage    : $msaObject->addGS($tag, $seqidx, $annAR)
-  Function : Add GS annotation to an ESL_MSA for sequence
-           : <$sqidx> with tag <$tag> and column annotation
-           : in the array referenced by <$annAR>
-  Args     : $tag:    name of GC annotation (e.g. SS_cons)
-           : $sqidx:  seq index to add GS for [0..nseq-1]
-           : $annstr: string that will become the GS annotation
-  Returns  : void
-
-=cut
-
-sub addGS {
-  my ( $self, $tag, $sqidx, $str ) = @_;
-
-  # contract checks
-  if(! defined $str) { croak "ERROR: unable to add GS annotation because it is empty"; }
-  $self->_check_msa();
-  $self->_check_sqidx($sqidx);
-
-  # add it
-  my $status = _c_addGS( $self->{esl_msa}, $tag, $sqidx, $str);
-  if ( $status != $ESLOK ) { croak "ERROR: unable to add GS annotation"; }
-  return;
-}
-
-#-------------------------------------------------------------------------------
-
 =head2 getGS_given_tag_sqidx
 
   Title    : getGS_given_tag_sqidx
