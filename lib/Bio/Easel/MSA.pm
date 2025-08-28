@@ -2143,7 +2143,7 @@ sub addGR_seq_position_numbers {
 
   Title    : addGR_all_seqs_position_numbers
   Incept   : EPN, Mon Jun 14 07:35:39 2021
-  Usage    : $msaObject->addGS_all_seqs_position_numbers()
+  Usage    : $msaObject->addGR_all_seqs_position_numbers()
   Function : Add GR annotation to an ESL_MSA with
            : tag 'POSX...' indicating the positions of each
            : aligned residue within the sequence
@@ -2375,6 +2375,249 @@ sub getGR_tagidx {
   $self->_check_msa();
   if(! $self->hasGR_any_sqidx_given_tag($tag)) { croak("trying to get idx of tag $tag that does not exist"); }
   return _c_getGR_tagidx( $self->{esl_msa}, $tag );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 addGS
+
+  Title    : addGS
+  Incept   : EPN, Thu Aug 28 10:00:05 2025
+  Usage    : $msaObject->addGS($tag, $seqidx, $annAR)
+  Function : Add GS annotation to an ESL_MSA for sequence
+           : <$sqidx> with tag <$tag> and column annotation
+           : in the array referenced by <$annAR>
+  Args     : $tag:    name of GC annotation (e.g. SS_cons)
+           : $sqidx:  seq index to add GS for [0..nseq-1]
+           : $annstr: string that will become the GS annotation
+  Returns  : void
+
+=cut
+
+sub addGS {
+  my ( $self, $tag, $sqidx, $str ) = @_;
+
+  # contract checks
+  if(! defined $str) { croak "ERROR: unable to add GS annotation because it is empty"; }
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  # add it
+  my $status = _c_addGS( $self->{esl_msa}, $tag, $sqidx, $str);
+  if ( $status != $ESLOK ) { croak "ERROR: unable to add GS annotation"; }
+  return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGS_given_tag_sqidx
+
+  Title    : getGS_given_tag_sqidx
+  Incept   : EPN, Thu Aug 28 09:57:27 2025
+  Usage    : $msaObject->getGS_given_tag_sqidx($tag, $sqidx)
+  Function : Return GS annotation named <tag> of an ESL_MSA
+           : for sequence <$sqidx> as a string.
+  Args     : $tag:    name of GS annotation
+           : $sqidx:  sequence index [0..nseq-1]
+  Returns  : $annstr: GS annotation, as a string.
+
+=cut
+
+sub getGS_given_tag_sqidx {
+  my ( $self, $tag, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  if(! (_c_hasGS_given_tag_sqidx( $self->{esl_msa}, $tag, $sqidx ))) { croak("trying to get GS annotation $tag for seq $sqidx that does not exist"); }
+  return _c_getGS_given_tag_sqidx( $self->{esl_msa}, $tag, $sqidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGS_given_tagidx_sqidx
+
+  Title    : getGS_given_tagidx_sqidx
+  Incept   : EPN, Thu Aug 28 09:57:30 2025
+  Usage    : $msaObject->getGS_given_tagidx_sqidx($tagidx, $sqidx)
+  Function : Return GS annotation of idx <tagidx> of an ESL_MSA
+           : for sequence <$sqidx> as a string.
+  Args     : $tagidx: idx of GS annotation
+           : $sqidx:  sequence index [0..nseq-1]
+  Returns  : $annstr: GS annotation, as a string.
+
+=cut
+
+sub getGS_given_tagidx_sqidx {
+  my ( $self, $tagidx, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+
+  if($tagidx >= $self->getGS_number) { croak("trying to get GS annotation for tag idx $tagidx that does not exist"); }
+  if(_c_hasGS_given_tagidx_sqidx( $self->{esl_msa}, $tagidx, $sqidx )) { 
+    return _c_getGS_given_tagidx_sqidx( $self->{esl_msa}, $tagidx, $sqidx );
+  }
+  else { 
+    croak("trying to get GS annotation for tag idx $tagidx for seq $sqidx, tag exists but not for this seq"); 
+  }
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 hasGS_given_tag_sqidx
+
+  Title    : hasGS_given_tag_sqidx
+  Incept   : EPN, Thu Aug 28 09:57:33 2025
+  Usage    : $msaObject->hasGS_given_tag_sqidx($tag, $sqidx)
+  Function : Return '1' if GS annotation named <tag> exists
+           : for sequence index $sqidx (0..$nseq-1),
+           : else return '0'.
+  Args     : $tag:   name of unparsed GS annotation
+           : $sqidx: seq index we are interested in
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGS_given_tag_sqidx {
+  my ( $self, $tag, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+  return _c_hasGS_given_tag_sqidx( $self->{esl_msa}, $tag, $sqidx );
+}
+#-------------------------------------------------------------------------------
+
+=head2 hasGS_given_tagidx_sqidx
+
+  Title    : hasGS_given_tagidx_sqidx
+  Incept   : EPN, Thu Aug 28 09:57:38 2025
+  Usage    : $msaObject->hasGS_given_tagidx_sqidx($tagidx, $sqidx)
+  Function : Return '1' if GS annotation with tag idx <tagidx> exists
+           : for sequence index $sqidx (0..$nseq-1),
+           : else return '0'.
+  Args     : $tagidx: index of tag (not including SS, SA, PP)
+           : $sqidx:  seq index we are interested in
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGS_given_tagidx_sqidx {
+  my ( $self, $tagidx, $sqidx ) = @_;
+
+  $self->_check_msa();
+  $self->_check_sqidx($sqidx);
+  return _c_hasGS_given_tagidx_sqidx( $self->{esl_msa}, $tagidx, $sqidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 hasGS_any_sqidx_given_tag
+
+  Title    : hasGS_any_sqidx_given_tag
+  Incept   : EPN, Thu Aug 28 09:57:41 2025
+  Usage    : $msaObject->hasGS_given_tag_any_seqidx($tag)
+  Function : Return '1' if GS annotation named <tag> exists
+           : for any sequence index
+           : else return '0'.
+  Args     : $tag:   name of unparsed GS annotation
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGS_any_sqidx_given_tag {
+  my ( $self, $tag ) = @_;
+
+  $self->_check_msa();
+  return _c_hasGS_any_sqidx_given_tag( $self->{esl_msa}, $tag);
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 hasGS_any_sqidx_given_tagidx
+
+  Title    : hasGS_any_sqidx_given_tagidx
+  Incept   : EPN, Thu Aug 28 09:57:44 2025
+  Usage    : $msaObject->hasGS_any_sqidx_given_tagidx($tagidx)
+  Function : Return '1' if GS annotation with tag idx <tagidx> exists
+           : else return '0'.
+  Args     : $tagidx: index of tag (not including SS, SA, PP)
+  Returns  : '1' if it exists, else '0'
+
+=cut
+
+sub hasGS_any_sqidx_given_tagidx {
+  my ( $self, $tagidx, $sqidx ) = @_;
+
+  $self->_check_msa();
+  return _c_hasGS_any_sqidx_given_tagidx( $self->{esl_msa}, $tagidx);
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGS_number
+
+  Title    : getGS_number
+  Incept   : EPN, Thu Aug 28 09:57:52 2025
+  Usage    : $msaObject->getGS_number()
+  Function : Return number of GS annotations available.
+  Args     : none
+  Returns  : number of GS annotations stored in MSA
+             (not including sqdesc, sqwgt, and wgt,
+               which are stored in a special way
+              (not in msa->gs))
+
+=cut
+
+sub getGS_number {
+  my ( $self ) = @_;
+
+  $self->_check_msa();
+  return (_c_getGS_number( $self->{esl_msa}));
+}
+
+
+#-------------------------------------------------------------------------------
+
+=head2 getGS_tag
+
+  Title    : getGS_tag
+  Incept   : EPN, Thu Aug 28 09:57:55 2025
+  Usage    : $msaObject->getGS_tag($tagidx)
+  Function : Return GS tag of idx <tagidx> as a string
+  Args     : $tagidx: idx of tag you want
+  Returns  : $tag: string
+
+=cut
+
+sub getGS_tag {
+  my ( $self, $tagidx ) = @_;
+
+  $self->_check_msa();
+  if($tagidx >= $self->getGS_number) { croak("trying to get GS tag idx $tagidx that does not exist"); }
+  return _c_getGS_tag( $self->{esl_msa}, $tagidx );
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 getGS_tagidx
+
+
+  Title    : getGS_tagidx
+  Incept   : EPN, Thu Aug 28 09:55:33 2025
+  Usage    : $msaObject->getGS_tagidx($tag)
+  Function : Return the idx of GS annotation with tag <tag>.
+  Args     : $tag: tag of annotation you want idx of
+  Returns  : $tagidx: idx of GS annotation
+  Dies     : if annotation with tag $tag does not exist.
+=cut
+
+sub getGS_tagidx {
+  my ( $self, $tag ) = @_;
+
+  $self->_check_msa();
+  if(! $self->hasGS_any_sqidx_given_tag($tag)) { croak("trying to get idx of tag $tag that does not exist"); }
+  return _c_getGS_tagidx( $self->{esl_msa}, $tag );
 }
 
 #-------------------------------------------------------------------------------
