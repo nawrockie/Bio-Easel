@@ -10,8 +10,8 @@ use strict;
 use Getopt::Long;
 use Bio::Easel::MSA;
 
-my $version     = "0.16";
-my $date        = "Dec 2022";
+my $version = "0.17";
+my $date    = "Sep 2025";
 
 my $in_gc = undef;
 my $in_gf = undef;
