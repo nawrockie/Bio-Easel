@@ -15,8 +15,8 @@ use strict;
 use Getopt::Long;
 use Bio::Easel::MSA;
 
-my $version      = "0.16";
-my $date        = "Dec 2022";
+my $version     = "0.17";
+my $date        = "Sep 2025";
 
 my $in_alifile  = "";    # name of input MSA file
 my $outfile     = "";    # name of output alignment file
@@ -67,7 +67,7 @@ if((! $do_nc) && (! $do_dg)) {
 if(! -e $in_alifile) { die "ERROR $in_alifile does not exist"; }
 
 # open file 
-my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile });
+my $msa = Bio::Easel::MSA->new({ fileLocation => $in_alifile, isRna => 1 });
 
 # check if we have sequence weights (if we need them)
 if($use_weights) { 

@@ -1,18 +1,18 @@
 #!/usr/bin/env perl
 # 
-# esl-alicapitalize.pl: set case of aligned sequences based on RF: 
-#                       nongap RF positions -> uppercase
-#                          gap RF positions -> lowercase
-#                       also modify SS_cons based on RF:
-#                          gap RF positions -> change to '.'
-#                       remaining SS_cons gets WUSSified
-#                       any BPs that with left or right half that are gaps in RF
-#                       are removed.
+# esl-alicapitalize.pl: - set case of aligned sequences based on RF: 
+#                           nongap RF positions -> uppercase
+#                           gap RF positions -> lowercase
+#                       - also modify SS_cons based on RF:
+#                           gap RF positions -> change to '.'
+#                       - remaining SS_cons gets WUSSified
+#                       - any BPs in which left or right half are gaps in RF are removed
+# 
 #                       Do not modify SS_cons with --keepsscons.
 #                       Do not modify seqs    with --keepseqs.
 #                       Do not output MSA with --checkonly, instead output
-#                       '1' if alignment is unchanged (already follows RF gap conventions)
-#                       '0' if alignment would be changed, and output details of changes
+#                       '0' if alignment is unchanged (already follows RF gap conventions)
+#                       '1' if alignment would be changed, and output details of changes
 #                       
 # EPN, Wed Dec  7 14:16:43 2022
 # 
@@ -23,8 +23,8 @@ use strict;
 use Getopt::Long;
 use Bio::Easel::MSA;
 
-my $version      = "0.16";
-my $date        = "Dec 2022";
+my $version     = "0.17";
+my $date        = "Sep 2025";
 
 my $in_alifile    = "";    # name of input MSA file
 my $outfile       = "";    # name of output alignment file
