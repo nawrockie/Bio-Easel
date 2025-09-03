@@ -15,8 +15,8 @@ use Getopt::Long;
 use Bio::Easel::SqFile;
 use Bio::Easel::Random;
 
-my $version      = "0.16";
-my $date        = "Dec 2022";
+my $version      = "0.17";
+my $date        = "Sep 2025";
 
 my $in_sqfile    = "";    # name of input file to split up, 1st cmd line arg
 my $do_nseq      = 1;     # true by default, output files should have a specified number of seqs each
