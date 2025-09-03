@@ -1,5 +1,16 @@
 # Bio-Easel 0.x release notes 
 
+### Bio-Easel 0.17 release (September 2025): Minor update
+  * Adds esl-aliconsensus.pl script for adding GC annotation
+    that summarizes the per-column conservation to a stockholm
+    alignment file.
+  * Adds esl-alitransfer.pl script for transferring GC and GF
+    annotation from one stockholm alignment file to another.
+  * In esl-compare2rf.pl, adds --seqrf <s> option to specify
+    reference sequence is <s>
+
+---
+
 ### Bio-Easel 0.16 release (December 2022): Minor update
   * Adds esl-alicapitalize.pl script for enforcing Infernal/HMMER
     conventions related to gap/nongap RF columns on a Stockholm
