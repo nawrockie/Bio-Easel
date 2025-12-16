@@ -1,6 +1,6 @@
-use strict;
+        use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 107;
+use Test::More tests => 151;
 
 
 BEGIN {
@@ -12,10 +12,12 @@ my ($alnfile3, $has_sa_cons, $has_pp_cons, $has_mm, $sa_cons, $pp_cons, $mm, $se
 my ($pp_alnfile, $grstr1, $grstr2, $grstr3, $has_gr, $test_gr);
 my @gcA  = ();
 my @gcA2 = ();
+my ($gs_alnfile, $has_desc, $has_acc, $has_wt, $has_gp, $has_bo, $gp_tagidx, $tag1, $gsnum, $de1, $wt1, $has_gp3, $gp3, $has_sg1, $sg1, $has_sg2, $has_sg);
 $alnfile = "./t/data/test.sto";
 $alnfile2 = "./t/data/test.rf.sto";
 $alnfile3 = "./t/data/test.gc.sto";
 $pp_alnfile = "./t/data/test-pp.sto";
+$gs_alnfile = "./t/data/test.gs.sto";
 
 # do all tests twice, once in digital and once in text mode
 for(my $mode = 0; $mode <= 1; $mode++) { 
@@ -246,6 +248,75 @@ for(my $mode = 0; $mode <= 1; $mode++) {
    $msa->set_mm($set_mm);
    $mm = $msa->get_mm();
    is($mm, $set_mm, "set_mm_correctly set MM");
+
+   # test GS subroutines
+   $msa = Bio::Easel::MSA->new({
+     fileLocation => $gs_alnfile, 
+     forceText    => $mode,
+   });
+
+   # has_GS_*
+   $has_desc = $msa->hasGS_any_sqidx_given_tag("DE");
+   is($has_desc, "1", "hasGS_any_sqidx_given_tag correctly noted presence of DE annotation (mode $mode)");
+
+   $has_acc = $msa->hasGS_any_sqidx_given_tag("AC");
+   is($has_acc, "1", "hasGS_any_sqidx_given_tag correctly noted presence of AC annotation (mode $mode)");
+
+   $has_wt = $msa->hasGS_any_sqidx_given_tag("WT");
+   is($has_wt, "1", "hasGS_any_sqidx_given_tag correctly noted presence of WT annotation (mode $mode)");
+
+   $has_bo = $msa->hasGS_any_sqidx_given_tag("BO");
+   is($has_bo, "0", "hasGS_any_sqidx_given_tag correctly noted absence of BO annotation (mode $mode)");
+
+   $has_gp = $msa->hasGS_any_sqidx_given_tagidx(0);
+   is($has_gp, "1", "hasGS_any_sqidx_given_tagidx correctly noted presence of GP annotation (mode $mode)");
+
+   $has_sg = $msa->hasGS_any_sqidx_given_tagidx(1);
+   is($has_sg, "1", "hasGS_any_sqidx_given_tagidx correctly noted presence of SG annotation (mode $mode)");
+
+   $has_bo = $msa->hasGS_any_sqidx_given_tag(2);
+   is($has_bo, "0", "hasGS_any_sqidx_given_tagidx correctly noted absence of BO annotation (mode $mode)");
+
+   $gp_tagidx = $msa->getGS_tagidx("GP");
+   is($gp_tagidx, "0", "getGS_tagidx correctly returned idx of GP (mode $mode)");
+   
+   $tag1 = $msa->getGS_tag(1);
+   is($tag1, "SG", "getGS_tag correctly returned SG tag for idx 1 (mode $mode)");
+   
+   $gsnum = $msa->getGS_number();
+   is($gsnum, 2, "getGS_number correctly returned number of unparsed GS tags (mode $mode)");
+
+   $has_desc = $msa->hasGS_given_tag_sqidx("DE", 0);
+   is($has_desc, 1, "hasGS_given_tag_sqidx correctly returned 1 (mode $mode)");
+   $de1 = $msa->getGS_given_tag_sqidx("DE", 0);
+   is($de1, "sample 1", "getGS_given_tag_sqidx correctly desc (mode $mode)");
+
+   $wt1 = $msa->get_sqwgt(1);
+   $wt1 += 0.0001;
+   $wt1 *= 10;
+   $wt1 = int($wt1);
+   is($wt1, "11", "get_sqwgt correctly returns weight (mode $mode)");
+
+   $has_gp3 = $msa->hasGS_given_tag_sqidx("GP", 2);
+   is($has_gp3, 1, "hasGS_given_tag_sqidx correctly returned 1 (mode $mode)");
+   $has_gp3 = $msa->hasGS_given_tagidx_sqidx(0, 2);
+   is($has_gp3, 1, "hasGS_given_tagidx_sqidx correctly returned 1 (mode $mode)");
+   $gp3 = $msa->getGS_given_tag_sqidx("GP", 2);
+   is($gp3, "GROUP3", "getGS_given_tag_sqidx correctly returned 1 (mode $mode)");
+   $gp3 = $msa->getGS_given_tagidx_sqidx(0, 2);
+   is($gp3, "GROUP3", "getGS_given_tag_sqidx correctly returned GROUP3 (mode $mode)");
+
+   $has_sg1 = $msa->hasGS_given_tag_sqidx("SG", 0);
+   is($has_sg1, 1, "hasGS_given_tag_sqidx correctly returned 1 (mode $mode)");
+   $has_sg1 = $msa->hasGS_given_tagidx_sqidx(1, 0);
+   is($has_sg1, 1, "hasGS_given_tagidx_sqidx correctly returned 1 (mode $mode)");
+   $sg1 = $msa->getGS_given_tag_sqidx("SG", 0);
+   is($sg1, "subgroup1", "getGS_given_tag_sqidx correctly returned subgroup1 (mode $mode)");
+
+   $has_sg2 = $msa->hasGS_given_tag_sqidx("SG", 1);
+   is($has_sg2, 0, "hasGS_given_tag_sqidx correctly returned 0 (mode $mode)");
+   $has_sg2 = $msa->hasGS_given_tagidx_sqidx(1, 1);
+   is($has_sg2, 0, "hasGS_given_tagidx_sqidx correctly returned 0 (mode $mode)");
 
    undef $msa;
 }
