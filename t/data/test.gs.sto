@@ -1,0 +1,27 @@
+# STOCKHOLM 1.0
+#=GF AU Infernal 1.1.1
+
+#=GS se-sample1 DE sample 1
+#=GS se-sample2 DE sample 2
+
+#=GS se-sample1 AC ACC1
+#=GS se-sample3 AC ACC3
+
+#=GS se-sample1 WT 1.0
+#=GS se-sample2 WT 1.1
+#=GS se-sample3 WT 0.9
+
+#=GS se-sample1 GP group1
+#=GS se-sample2 GP group2
+#=GS se-sample3 GP GROUP3
+
+#=GS se-sample1 SG subgroup1
+#=GS se-sample3 SG subGROUP3
+
+
+se-sample1         UUAACUUUG.....GUUUGCUCCaAAA.---
+se-sample2         UACACUUC-.....GAUG-GACC.AAA.GUC
+se-sample3         ---------aaaccGGUGGGUCCgUUAgGAC
+#=GC SS_cons       ::<<<____~~~~~>->>-<<-<.___.>>>
+#=GC RF            aAgaCUUCG~~~~~GAucgggCg.AcA.ccc
+//
