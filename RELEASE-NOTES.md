@@ -1,5 +1,12 @@
 # Bio-Easel 0.x release notes 
 
+### Bio-Easel 0.18 release (September 2026): Minor update
+  * Adds addGS and a family of getGS_*/hasGS_* subroutines to MSA.pm
+    for reading and testing for #=GS per-sequence annotation, as
+    analogs of the existing #=GR per-residue annotation subroutines.
+
+---
+
 ### Bio-Easel 0.17 release (September 2025): Minor update
   * Adds esl-aliconsensus.pl script for adding GC annotation
     that summarizes the per-column conservation to a stockholm
